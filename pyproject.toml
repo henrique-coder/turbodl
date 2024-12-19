@@ -5,7 +5,7 @@ build-backend = "poetry.core.masonry.api"
 [tool.poetry]
 name = "turbodl"
 version = "0.0.0"
-description = ""
+description = "An extremely smart and efficient download manager for various cases."
 authors = ["henrique-coder <hjyz6rqyb@mozmail.com>"]
 license = "MIT"
 readme = "README.md"
