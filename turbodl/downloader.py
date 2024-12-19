@@ -288,11 +288,12 @@ class TurboDL:
             self.output_path = output_path.as_posix()
 
             progress_columns = [
-                TextColumn(f'Downloading a {mime_type.split("/")[0] if mime_type else "unknown"} file ({mime_type})'),
-                BarColumn(),
+                TextColumn(output_path.name, style='magenta'),
+                BarColumn(style='bold white', complete_style='bold red', finished_style='bold green'),
                 DownloadColumn(),
                 TransferSpeedColumn(),
                 TimeRemainingColumn(),
+                TextColumn('[bold][progress.percentage]{task.percentage:>3.0f}%'),
             ]
 
             with Progress(*progress_columns, disable=not self._show_progress_bar) as progress:

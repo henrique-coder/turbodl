@@ -6,8 +6,8 @@ from typer import Typer, Argument, Option, Exit
 from rich.console import Console
 
 # Local imports
-from ..downloader import TurboDL
-from ..exceptions import DownloadError, RequestError, TurboDLError
+from turbodl.downloader import TurboDL
+from turbodl.exceptions import DownloadError, RequestError, TurboDLError
 
 
 app = Typer()
@@ -25,20 +25,23 @@ def main(
         None,
         '--max-connections',
         '-mc',
-        help='The maximum number of connections to use for downloading the file. (default: auto)',
+        help="The maximum number of connections to use for downloading the file (default: 'auto').",
     ),
-    connection_speed: float = Option(None, '--connection-speed', '-cs', help='The connection speed in Mbps. (default: 80)'),
+    connection_speed: float = Option(None, '--connection-speed', '-cs', help='The connection speed in Mbps (default: 80).'),
     overwrite: bool = Option(
-        None,
+        True,
         '--overwrite/--no-overwrite',
         '-o/-no',
-        help='Overwrite the file if it already exists. Otherwise, a "_1", "_2", etc. suffix will be added. (default: True)',
+        help='Overwrite the file if it already exists. Otherwise, a "_1", "_2", etc. suffix will be added.',
     ),
     show_progress: bool = Option(
-        None, '--show-progress/--hide-progress', '-sp/-hp', help='Show or hide the download progress bar. (default: True)'
+        True,
+        '--show-progress/--hide-progress',
+        '-sp/-hp',
+        help='Show or hide the download progress bar.'
     ),
     timeout: int = Option(
-        None, '--timeout', '-t', help='Timeout in seconds for the download process. Or None for no timeout. (default: None)'
+        None, '--timeout', '-t', help='Timeout in seconds for the download process. Or None for no timeout.'
     ),
 ) -> None:
     try:
