@@ -13,73 +13,10 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build-binaries:
-    name: 🔨 Build Platform Binaries
-    strategy:
-      matrix:
-        include:
-          - os: ubuntu-22.04
-            artifact_name: turbodl
-            asset_name: turbodl-linux
-          - os: windows-latest
-            artifact_name: turbodl.exe
-            asset_name: turbodl-windows.exe
-          - os: macos-latest
-            artifact_name: turbodl
-            asset_name: turbodl-macos
-    runs-on: ${{ matrix.os }}
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: 🐍 Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.13"
-
-      - name: 📦 Install Poetry
-        run: |
-          pip install poetry
-          poetry install
-
-      - name: 🔧 Install UPX (Ubuntu)
-        if: matrix.os == 'ubuntu-22.04'
-        run: sudo apt-get install -y upx
-
-      - name: 🔧 Install UPX (macOS)
-        if: matrix.os == 'macos-latest'
-        run: brew install upx
-
-      - name: 🔧 Install UPX (Windows)
-        if: matrix.os == 'windows-latest'
-        run: |
-          curl -L https://github.com/upx/upx/releases/download/v4.2.4/upx-4.2.4-win64.zip -o upx.zip
-          7z x upx.zip
-          echo "$PWD/upx-4.2.4-win64" >> $GITHUB_PATH
-
-      - name: 🏗️ Build Binary
-        run: |
-          poetry add --group dev pyinstaller
-          poetry run pyinstaller --onefile --clean --name turbodl \
-            --add-data "README.md:." \
-            --hidden-import turbodl.cli.commands \
-            --hidden-import typer \
-            --hidden-import rich \
-            --collect-submodules turbodl \
-            --upx-dir $(which upx) \
-            --optimize=2 \
-            turbodl/cli/__main__.py
-
-      - name: 📤 Upload Binary
-        uses: actions/upload-artifact@v3
-        with:
-          name: ${{ matrix.asset_name }}
-          path: dist/${{ matrix.artifact_name }}
-
   create-release-and-publish:
-    needs: build-binaries
     name: 🏷️ Create Release and Publish to PyPI
     runs-on: ubuntu-22.04
-    if: startsWith(github.event.head_commit.message, 'Bump version to') && startsWith(github.event.head_commit.message, '[debug]')
+    if: startsWith(github.event.head_commit.message, 'Bump version to')
     timeout-minutes: 5
 
     steps:
@@ -121,17 +58,6 @@ jobs:
             [View all changes](https://github.com/henrique-coder/turbodl/compare/${{ steps.previoustag.outputs.tag }}...v${{ steps.version.outputs.version }})
           draft: false
           prerelease: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: 📥 Download Binaries
-        uses: actions/download-artifact@v3
-
-      - name: 📎 Attach Binaries to Release
-        run: |
-          for binary in turbodl-*; do
-            gh release upload v${{ steps.version.outputs.version }} "$binary" --clobber
-          done
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
