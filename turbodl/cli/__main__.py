@@ -35,14 +35,9 @@ def main(
         help='Overwrite the file if it already exists. Otherwise, a "_1", "_2", etc. suffix will be added.',
     ),
     show_progress: bool = Option(
-        True,
-        '--show-progress/--hide-progress',
-        '-sp/-hp',
-        help='Show or hide the download progress bar.'
+        True, '--show-progress/--hide-progress', '-sp/-hp', help='Show or hide the download progress bar.'
     ),
-    timeout: int = Option(
-        None, '--timeout', '-t', help='Timeout in seconds for the download process. Or None for no timeout.'
-    ),
+    timeout: int = Option(None, '--timeout', '-t', help='Timeout in seconds for the download process. Or None for no timeout.'),
 ) -> None:
     try:
         turbodl = TurboDL(
