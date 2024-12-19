@@ -1,0 +1,84 @@
+name: Auto Release Creation and PyPI Publishing
+
+on:
+  push:
+    branches: ["main"]
+
+permissions:
+  contents: write
+  id-token: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  create-release-and-publish:
+    name: 🏷️ Create Release and Publish to PyPI
+    runs-on: ubuntu-22.04
+    if: startsWith(github.event.head_commit.message, 'Bump version to')
+    timeout-minutes: 5
+
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 📝 Extract Version
+        id: version
+        run: |
+          VERSION=$(echo "${{ github.event.head_commit.message }}" | grep -oP 'Bump version to \K[^ ]+')
+          echo "Version detected: $VERSION"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: 🏷️ Get Previous Tag
+        id: previoustag
+        run: |
+          PREV_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+          echo "Previous tag: $PREV_TAG"
+          echo "tag=$PREV_TAG" >> $GITHUB_OUTPUT
+
+      - name: 🚀 Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.version.outputs.version }}
+          name: "🎉 TurboDL ${{ steps.version.outputs.version }} - Summary"
+          body: |
+            ## 📦 Installation Options
+
+            TurboDL is available on [GitHub](https://github.com/henrique-coder/turbodl) and [PyPI](https://pypi.org/project/turbodl).
+
+            ### 📋 Changelog:
+
+            - _Generating release notes..._
+
+            ### 📊 Compare Changes
+
+            [View all changes](https://github.com/henrique-coder/turbodl/compare/${{ steps.previoustag.outputs.tag }}...v${{ steps.version.outputs.version }})
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 🐍 Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          check-latest: true
+
+      - name: 🔧 Install Build Tools
+        run: python -m pip install --upgrade pip build twine
+
+      - name: 🏗️ Build Package
+        run: python -m build --sdist --wheel
+
+      - name: ✅ Validate Metadata
+        run: twine check dist/*
+
+      - name: 🚀 Upload to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          password: ${{ secrets.PYPI_API_TOKEN }}
+          verbose: true
