@@ -1,0 +1,15 @@
+# IDE
+.idea
+.venv
+__pycache__
+
+# Directories
+.debug
+.ruff_cache
+
+# Files
+requirements-dev.txt
+tempCodeRunnerFile.py
+
+# Extensions
+# ...
