@@ -25,6 +25,8 @@ pip install -U turbodl  # Install the latest version of TurboDL
 
 ### Example Usage
 
+#### Inside a Python script
+
 ```python
 from turbodl import TurboDL
 from pathlib import Path  # Optional
@@ -42,10 +44,35 @@ turbodl.download(
     url='https://example.com/file',
     output_path=Path.cwd()
 )
-# >>> Downloading a {mime} file ({mime/type}) ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 35.6/35.6 kB 81.2 MB/s 0:00:00
+# >>> filename.ext ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 35.6/35.6 kB 81.2 MB/s 0:00:00 100%
 
 # All functions are documented and have detailed typings, use your development IDE to learn more.
 
+```
+
+#### From the command line
+
+```bash
+turbodl --help
+# >>> ╭─ Arguments ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+# >>> │ *    url              TEXT           The download URL to download the file from. [default: None] [required]                                                                                                                                                        │
+# >>> │      output_path      [OUTPUT_PATH]  The path to save the downloaded file to. If the path is a directory, the file name will be generated from the server response. If the path is a file, the file will be saved with the provided name. If not provided, the     │
+# >>> │                                      file will be saved to the current working directory. (default: Path.cwd())                                                                                                                                                    │
+# >>> │                                      [default: None]                                                                                                                                                                                                               │
+# >>> ╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+# >>> ╭─ Options ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+# >>> │ --max-connections     -mc                        INTEGER  The maximum number of connections to use for downloading the file (default: 'auto'). [default: None]                                                                                                     │
+# >>> │ --connection-speed    -cs                        FLOAT    The connection speed in Mbps (default: 80). [default: None]                                                                                                                                              │
+# >>> │ --overwrite           -o   --no-overwrite   -no           Overwrite the file if it already exists. Otherwise, a "_1", "_2", etc. suffix will be added. [default: overwrite]                                                                                        │
+# >>> │ --show-progress       -sp  --hide-progress  -hp           Show or hide the download progress bar. [default: show-progress]                                                                                                                                         │
+# >>> │ --timeout             -t                         INTEGER  Timeout in seconds for the download process. Or None for no timeout. [default: None]                                                                                                                     │
+# >>> │ --install-completion                                      Install completion for the current shell.                                                                                                                                                                │
+# >>> │ --show-completion                                         Show completion for the current shell, to copy it or customize the installation.                                                                                                                         │
+# >>> │ --help                                                    Show this message and exit.                                                                                                                                                                              │
+# >>> ╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+turbodl https://example.com/file [...] path/to/file
+# >>> filename.ext ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 35.6/35.6 kB 81.2 MB/s 0:00:00 100%
 ```
 
 ### Contributing
