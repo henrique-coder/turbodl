@@ -41,10 +41,10 @@ turbodl = TurboDL(
 )
 
 turbodl.download(
-    url='https://example.com/file',
+    url='https://example.com/file.txt',
     output_path=Path.cwd()
 )
-# >>> filename.ext ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 35.6/35.6 kB 81.2 MB/s 0:00:00 100%
+# >>> file.txt ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 35.6/35.6 kB 36.2 MB/s 0:00:00 100%
 
 # All functions are documented and have detailed typings, use your development IDE to learn more.
 
@@ -71,8 +71,8 @@ turbodl --help
 # >>> │ --help                                                    Show this message and exit.                                                                                                                                                                              │
 # >>> ╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
 
-turbodl https://example.com/file [...] path/to/file
-# >>> filename.ext ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 35.6/35.6 kB 81.2 MB/s 0:00:00 100%
+turbodl https://example.com/file.txt [...] path/to/file
+# >>> file.txt ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 35.6/35.6 kB 36.2 MB/s 0:00:00 100%
 ```
 
 ### Contributing
