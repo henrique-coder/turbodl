@@ -14,7 +14,7 @@ from urllib.parse import unquote, urlparse
 # Third-party imports
 from httpx import Client, HTTPStatusError
 from psutil import virtual_memory
-from rich.progress import BarColumn, DownloadColumn, Progress, TextColumn, TimeRemainingColumn, TransferSpeedColumn
+from rich.progress import BarColumn, DownloadColumn, Progress, SpinnerColumn, TextColumn, TimeRemainingColumn, TransferSpeedColumn
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 # Local imports
@@ -29,6 +29,7 @@ class TurboDL:
         max_connections: Union[int, Literal['auto']] = 'auto',
         connection_speed: float = 80,
         overwrite: bool = True,
+        show_optimization_progress_bar: bool = True,
         show_progress_bar: bool = True,
         custom_headers: Optional[Dict[Any, Any]] = None,
         timeout: Optional[int] = None,
@@ -40,40 +41,59 @@ class TurboDL:
             max_connections: The maximum number of connections to use for downloading the file. (default: 'auto')
             connection_speed: Your connection speed in Mbps (megabits per second). (default: 80)
             overwrite: Overwrite the file if it already exists. Otherwise, a "_1", "_2", etc. suffix will be added. (default: True)
+            show_optimization_progress_bar: Show or hide the initial optimization progress bar. (default: True)
             show_progress_bar: Show or hide the download progress bar. (default: True)
             custom_headers: Custom headers to include in the request. If None, default headers will be used. Imutable headers are 'Accept-Encoding' and 'Range'. (default: None)
             timeout: Timeout in seconds for the download process. Or None for no timeout. (default: None)
         """
 
-        self._max_connections: Union[int, Literal['auto']] = max_connections
-        self._connection_speed: int = connection_speed
-        self._overwrite: bool = overwrite
-        self._show_progress_bar: bool = show_progress_bar
-        self._timeout: Optional[int] = timeout
+        with Progress(
+            SpinnerColumn(spinner_name='dots', style='bold cyan'),
+            TextColumn('[bold cyan]Optimizing download settings...', justify='left'),
+            BarColumn(bar_width=40, style='cyan', complete_style='green'),
+            TimeRemainingColumn(),
+            TextColumn('[bold][progress.percentage]{task.percentage:>3.0f}%'),
+            transient=True,
+            disable=not show_optimization_progress_bar,
+        ) as progress:
+            task = progress.add_task('', total=100)
 
-        imutable_headers = ['Accept-Encoding', 'Range']
+            self._max_connections: Union[int, Literal['auto']] = max_connections
+            self._connection_speed: int = connection_speed
+            self._overwrite: bool = overwrite
+            self._show_progress_bar: bool = show_progress_bar
+            self._timeout: Optional[int] = timeout
+            progress.update(task, advance=20)
 
-        self._custom_headers: Dict[Any, Any] = {
-            'Accept': '*/*',
-            'Accept-Encoding': 'identity',
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
-        }
+            self._custom_headers: Dict[Any, Any] = {
+                'Accept': '*/*',
+                'Accept-Encoding': 'identity',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+            }
 
-        if custom_headers:
-            for key, value in custom_headers.items():
-                if key.title() not in imutable_headers:
-                    self._custom_headers[key.title()] = value
+            if custom_headers:
+                for key, value in custom_headers.items():
+                    if key.title() not in ['Accept-Encoding', 'Range']:
+                        self._custom_headers[key.title()] = value
 
-        self._client: Client = Client(headers=self._custom_headers, follow_redirects=True, verify=True, timeout=self._timeout)
+            progress.update(task, advance=20)
 
-        self._buffer_size: int = self._get_optimal_buffer_size()
-        self._buffer_pool: Dict[int, memoryview] = {}
-        self._active_buffers: Set[int] = set()
+            self._client: Client = Client(
+                headers=self._custom_headers, follow_redirects=True, verify=True, timeout=self._timeout, http2=True
+            )
+            progress.update(task, advance=20)
 
-        for i in range(8):
-            self._buffer_pool[i] = memoryview(array('B', [0] * self._buffer_size))
+            self._buffer_size: int = min(8 * 1024 * 1024, max(1024 * 1024, self._get_optimal_buffer_size()))
+            self._buffer_pool: Dict[int, memoryview] = {}
+            self._active_buffers: Set[int] = set()
+            progress.update(task, advance=20)
 
-        self.output_path: str = None
+            for i in range(8):
+                self._buffer_pool[i] = memoryview(array('B', [0] * self._buffer_size))
+
+            progress.update(task, advance=20)
+
+            self.output_path: str = None
 
     @lru_cache(maxsize=1)
     def _get_optimal_buffer_size(self) -> int:
@@ -356,7 +376,7 @@ class TurboDL:
 
         try:
             output_path = Path(output_path)
-            total_size, mime_type, suggested_filename = self._get_file_info(url)
+            total_size, _, suggested_filename = self._get_file_info(url)
 
             if output_path.is_dir():
                 output_path = Path(output_path, suggested_filename)
@@ -382,7 +402,7 @@ class TurboDL:
             ]
 
             with Progress(*progress_columns, disable=not self._show_progress_bar) as progress:
-                task_id = progress.add_task('download', total=total_size or 100, filename=output_path.name, mime=mime_type)
+                task_id = progress.add_task('download', total=total_size or 100, filename=output_path.name)
 
                 if total_size == 0:
                     chunk = self._download_chunk(url, 0, 0, progress, task_id)
