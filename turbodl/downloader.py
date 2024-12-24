@@ -1,13 +1,14 @@
 # Built-in imports
+from array import array
 from concurrent.futures import ThreadPoolExecutor
 from functools import lru_cache
 from hashlib import new as hashlib_new
+from io import BytesIO
 from math import ceil
 from mimetypes import guess_extension as guess_mimetype_extension
 from os import PathLike
 from pathlib import Path
-from queue import Queue
-from typing import Any, Dict, List, Literal, Optional, Tuple, Union
+from typing import Any, Dict, List, Literal, Optional, Set, Tuple, Union
 from urllib.parse import unquote, urlparse
 
 # Third-party imports
@@ -62,15 +63,31 @@ class TurboDL:
                 if key.title() not in imutable_headers:
                     self._custom_headers[key.title()] = value
 
-        self._client: Client = Client(headers=self._custom_headers, follow_redirects=True, timeout=self._timeout)
+        self._client: Client = Client(headers=self._custom_headers, follow_redirects=True, verify=True, timeout=self._timeout)
 
-        self._buffer_pool = Queue()
-        self._buffer_size = 8192
+        self._buffer_size: int = 1024 * 1024
+        self._buffer_pool: Dict[int, memoryview] = {}
+        self._active_buffers: Set[int] = set()
 
-        for _ in range(32):
-            self._buffer_pool.put(bytearray(self._buffer_size))
+        for i in range(32):
+            buffer = memoryview(array('B', [0] * self._buffer_size))
+            self._buffer_pool[i] = buffer
 
         self.output_path: str = None
+
+    def _get_buffer(self) -> memoryview:
+        for i, buffer in self._buffer_pool.items():
+            if i not in self._active_buffers:
+                self._active_buffers.add(i)
+                return buffer
+
+        return memoryview(array('B', [0] * self._buffer_size))
+
+    def _release_buffer(self, buffer: memoryview) -> None:
+        for i, pool_buffer in self._buffer_pool.items():
+            if pool_buffer == buffer:
+                self._active_buffers.remove(i)
+                break
 
     @lru_cache()
     def _calculate_connections(self, file_size: int, connection_speed: Union[float, Literal['auto']]) -> int:
@@ -241,26 +258,28 @@ class TurboDL:
             DownloadError: If an error occurs while downloading the chunk.
         """
 
-        buffer = self._buffer_pool.get()
-        headers = {**self._custom_headers}
-        chunk_size = min(8192, end - start + 1)
+        buffer = self._get_buffer()
+        output = BytesIO()
 
-        if end > 0:
-            headers['Range'] = f'bytes={start}-{end}'
+        headers = {**self._custom_headers}
 
         try:
+            if end > 0:
+                headers['Range'] = f'bytes={start}-{end}'
+
             with self._client.stream('GET', url, headers=headers) as r:
                 r.raise_for_status()
 
-                for chunk in r.iter_bytes(chunk_size=chunk_size):
-                    buffer.extend(chunk)
+                for chunk in r.iter_bytes(chunk_size=min(self._buffer_size, end - start + 1)):
+                    buffer[: len(chunk)] = chunk
+                    output.write(buffer[: len(chunk)])
                     progress.update(task_id, advance=len(chunk))
 
-            return bytes(buffer)
+                return output.getvalue()
         except HTTPStatusError as e:
             raise DownloadError(f'An error occurred while downloading chunk: {str(e)}') from e
         finally:
-            self._buffer_pool.put(buffer)
+            self._release_buffer(buffer)
 
     def download(
         self,
@@ -283,7 +302,7 @@ class TurboDL:
             'shake_128',
             'shake_256',
         ] = 'sha256',
-    ):
+    ) -> None:
         """
         Downloads a file from the provided URL to the output file path.
 
@@ -367,6 +386,7 @@ class TurboDL:
             if file_hash != expected_hash:
                 Path(output_path).unlink(missing_ok=True)
                 self.output_path = None
+
                 raise HashVerificationError(
                     f'Hash verification failed. Hash type: "{hash_type}". Expected hash: "{expected_hash}". Actual hash: "{file_hash}"'
                 )
