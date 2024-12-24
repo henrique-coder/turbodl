@@ -35,6 +35,7 @@ from pathlib import Path  # Optional
 turbodl = TurboDL(
     max_connections='auto',
     connection_speed=80,
+    show_optimization_progress_bar=True,
     show_progress_bar=True,
     custom_headers=None,
     timeout=None
@@ -54,22 +55,17 @@ turbodl.download(
 
 ```bash
 turbodl --help
-# >>> ╭─ Arguments ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
-# >>> │ *    url              TEXT           The download URL to download the file from. [default: None] [required]                                                                                                                                                        │
-# >>> │      output_path      [OUTPUT_PATH]  The path to save the downloaded file to. If the path is a directory, the file name will be generated from the server response. If the path is a file, the file will be saved with the provided name. If not provided, the     │
-# >>> │                                      file will be saved to the current working directory. (default: Path.cwd())                                                                                                                                                    │
-# >>> │                                      [default: None]                                                                                                                                                                                                               │
-# >>> ╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
-# >>> ╭─ Options ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
-# >>> │ --max-connections     -mc                        INTEGER  The maximum number of connections to use for downloading the file (default: 'auto'). [default: None]                                                                                                     │
-# >>> │ --connection-speed    -cs                        FLOAT    The connection speed in Mbps (default: 80). [default: None]                                                                                                                                              │
-# >>> │ --overwrite           -o   --no-overwrite   -no           Overwrite the file if it already exists. Otherwise, a "_1", "_2", etc. suffix will be added. [default: overwrite]                                                                                        │
-# >>> │ --show-progress       -sp  --hide-progress  -hp           Show or hide the download progress bar. [default: show-progress]                                                                                                                                         │
-# >>> │ --timeout             -t                         INTEGER  Timeout in seconds for the download process. Or None for no timeout. [default: None]                                                                                                                     │
-# >>> │ --install-completion                                      Install completion for the current shell.                                                                                                                                                                │
-# >>> │ --show-completion                                         Show completion for the current shell, to copy it or customize the installation.                                                                                                                         │
-# >>> │ --help                                                    Show this message and exit.                                                                                                                                                                              │
-# >>> ╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+# >>> ╭─ Options ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+# >>> │ --max-connections                 -mc                                           INTEGER  The maximum number of connections to use for downloading the file (default: 'auto'). [default: None]                                │
+# >>> │ --connection-speed                -cs                                           FLOAT    The connection speed in Mbps (default: 80). [default: None]                                                                         │
+# >>> │ --overwrite                       -o    --no-overwrite                    -no            Overwrite the file if it already exists. Otherwise, a "_1", "_2", etc. suffix will be added. [default: overwrite]                   │
+# >>> │ --show-optimization-progress-bar  -sop  --hide-optimization-progress-bar  -hop           Show or hide the initial optimization progress bar. [default: show-optimization-progress-bar]                                       │
+# >>> │ --show-progress                   -sp   --hide-progress                   -hp            Show or hide the download progress bar. [default: show-progress]                                                                    │
+# >>> │ --timeout                         -t                                            INTEGER  Timeout in seconds for the download process. Or None for no timeout. [default: None]                                                │
+# >>> │ --install-completion                                                                     Install completion for the current shell.                                                                                           │
+# >>> │ --show-completion                                                                        Show completion for the current shell, to copy it or customize the installation.                                                    │
+# >>> │ --help                                                                                   Show this message and exit.                                                                                                         │
+# >>> ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
 
 turbodl https://example.com/file.txt [...] path/to/file
 # >>> file.txt ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 35.6/35.6 kB 36.2 MB/s 0:00:00 100%
