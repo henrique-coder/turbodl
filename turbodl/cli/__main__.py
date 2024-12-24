@@ -27,7 +27,7 @@ def main(
         '-mc',
         help="The maximum number of connections to use for downloading the file (default: 'auto').",
     ),
-    connection_speed: float = Option(None, '--connection-speed', '-cs', help='The connection speed in Mbps (default: 80).'),
+    connection_speed: float = Option(None, '--connection-speed', '-cs', help='Your connection speed in Mbps (default: 80).'),
     overwrite: bool = Option(
         True,
         '--overwrite/--no-overwrite',
