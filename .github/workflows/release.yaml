@@ -39,6 +39,14 @@ jobs:
           echo "Previous tag: $PREV_TAG"
           echo "tag=$PREV_TAG" >> $GITHUB_OUTPUT
 
+      - name: 📝 Generate Commit List
+        id: commit_list
+        run: |
+          COMMITS=$(git log --pretty=format:"- [%s](https://github.com/${{ github.repository }}/commit/%H)" ${{ steps.previoustag.outputs.tag }}..HEAD)
+          echo "commits<<EOF" >> $GITHUB_OUTPUT
+          echo "$COMMITS" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
       - name: 🚀 Create Release
         uses: softprops/action-gh-release@v2
         with:
@@ -51,7 +59,7 @@ jobs:
 
             ### 📋 Changelog:
 
-            - _Generating release notes..._
+            ${{ steps.commit_list.outputs.commits }}
 
             ### 📊 Compare Changes
 
