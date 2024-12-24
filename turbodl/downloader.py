@@ -4,7 +4,7 @@ from concurrent.futures import ThreadPoolExecutor
 from functools import lru_cache
 from hashlib import new as hashlib_new
 from io import BytesIO
-from math import ceil
+from math import ceil, sqrt, log2
 from mimetypes import guess_extension as guess_mimetype_extension
 from os import PathLike
 from pathlib import Path
@@ -37,7 +37,7 @@ class TurboDL:
 
         Args:
             max_connections: The maximum number of connections to use for downloading the file. (default: 'auto')
-            connection_speed: The connection speed in Mbps (megabits per second). (default: 80)
+            connection_speed: Your connection speed in Mbps (megabits per second). (default: 80)
             overwrite: Overwrite the file if it already exists. Otherwise, a "_1", "_2", etc. suffix will be added. (default: True)
             show_progress_bar: Show or hide the download progress bar. (default: True)
             custom_headers: Custom headers to include in the request. If None, default headers will be used. Imutable headers are 'Accept-Encoding' and 'Range'. (default: None)
@@ -92,72 +92,40 @@ class TurboDL:
     @lru_cache()
     def _calculate_connections(self, file_size: int, connection_speed: Union[float, Literal['auto']]) -> int:
         """
-        Calculates optimal number of connections based on file size and connection speed.
+        Calculates the optimal number of connections based on file size and connection speed.
 
-        - The connection speed ranges and recommended connections:
+        The formula uses an adjusted logarithmic function that considers:
+        - File size in MB
+        - Connection speed in Mbps
+        - TCP connection physical limits
+        - Thread management overhead
 
-        | Connection Speed | Base Multiplier |
-        | ---------------- | --------------- |
-        | < 10 Mbps        | 0.2x            |
-        | 10-50 Mbps       | 0.4x            |
-        | 50-100 Mbps      | 0.6x            |
-        | 100-300 Mbps     | 0.8x            |
-        | 300-500 Mbps     | 1.0x            |
-        | > 500 Mbps       | 1.2x            |
+        Base formula:
+        \[ connections = \min(32, \max(1, \lceil \alpha \cdot \log_{2}(S) \cdot \sqrt{\frac{V}{100}} \rceil)) \]
 
-        - Example outputs for different connection speeds and file sizes:
-
-        | Connection Speed | 1MB file  | 10MB file  | 100MB file  | 500MB file  |
-        | ---------------- | --------- | ---------- | ----------- | ----------- |
-        | 10 Mbps          | 1         | 3          | 6           | 13          |
-        | 50 Mbps          | 2         | 3          | 6           | 13          |
-        | 100 Mbps         | 2         | 5          | 10          | 19          |
-        | 300 Mbps         | 3         | 6          | 13          | 26          |
-        | 500 Mbps         | 4         | 8          | 16          | 32          |
-        | 1000 Mbps        | 4         | 9          | 19          | 32          |
+        Where:
+        - S: File size in MB
+        - V: Connection speed in Mbps
+        - α: Adjustment factor (4.2)
 
         Args:
-            file_size: The size of the file to download. (required)
-            connection_speed: The connection speed in Mbps. (default: 80)
+            file_size: File size in bytes
+            connection_speed: Connection speed in Mbps
 
         Returns:
-            The number of connections to use.
+            Number of connections to be used (between 1 and 32)
         """
 
         if self._max_connections != 'auto':
             return self._max_connections
 
         file_size_mb = file_size / (1024 * 1024)
-
-        if file_size_mb < 1:
-            base_connections = 1
-        elif file_size_mb <= 5:
-            base_connections = 4
-        elif file_size_mb <= 50:
-            base_connections = 8
-        elif file_size_mb <= 200:
-            base_connections = 16
-        elif file_size_mb <= 400:
-            base_connections = 24
-        else:
-            base_connections = 32
-
         speed = 80.0 if connection_speed == 'auto' else float(connection_speed)
 
-        if speed < 10:
-            multiplier = 0.2
-        elif speed <= 50:
-            multiplier = 0.4
-        elif speed <= 100:
-            multiplier = 0.6
-        elif speed <= 300:
-            multiplier = 0.8
-        elif speed <= 500:
-            multiplier = 1.0
-        else:
-            multiplier = 1.2
+        alpha = 4.2
+        connections = alpha * log2(max(1, file_size_mb)) * sqrt(speed/100)
 
-        return max(1, min(int(base_connections * multiplier), 32))
+        return max(1, min(32, ceil(connections)))
 
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=5), reraise=True)
     def _get_file_info(self, url: str) -> Tuple[int, str, str]:
@@ -222,17 +190,18 @@ class TurboDL:
             return [(0, 0)]
 
         connections = self._calculate_connections(total_size, self._connection_speed)
-
-        optimal_chunk = max(1024 * 1024, total_size // (connections * 2))
-        chunk_size = min(ceil(total_size / connections), optimal_chunk)
+        chunk_size = ceil(total_size / connections)
 
         ranges = []
         start = 0
+        remaining = total_size
 
-        while start < total_size:
-            end = min(start + chunk_size - 1, total_size - 1)
+        while remaining > 0:
+            current_chunk = min(chunk_size, remaining)
+            end = start + current_chunk - 1
             ranges.append((start, end))
             start = end + 1
+            remaining -= current_chunk
 
         return ranges
 
@@ -259,9 +228,10 @@ class TurboDL:
         """
 
         buffer = self._get_buffer()
-        output = BytesIO()
+        output_buffer = BytesIO()
 
         headers = {**self._custom_headers}
+        chunk_size = end - start + 1
 
         try:
             if end > 0:
@@ -269,13 +239,23 @@ class TurboDL:
 
             with self._client.stream('GET', url, headers=headers) as r:
                 r.raise_for_status()
+                downloaded = 0
 
-                for chunk in r.iter_bytes(chunk_size=min(self._buffer_size, end - start + 1)):
-                    buffer[: len(chunk)] = chunk
-                    output.write(buffer[: len(chunk)])
-                    progress.update(task_id, advance=len(chunk))
+                for chunk in r.iter_bytes(chunk_size=min(self._buffer_size, chunk_size)):
+                    current_size = min(len(chunk), chunk_size - downloaded)
 
-                return output.getvalue()
+                    if current_size <= 0:
+                        break
+
+                    buffer[:current_size] = chunk[:current_size]
+                    output_buffer.write(buffer[:current_size])
+                    progress.update(task_id, advance=current_size)
+                    downloaded += current_size
+
+                    if downloaded >= chunk_size:
+                        break
+
+            return output_buffer.getvalue()
         except HTTPStatusError as e:
             raise DownloadError(f'An error occurred while downloading chunk: {str(e)}') from e
         finally:
