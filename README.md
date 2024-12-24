@@ -13,6 +13,7 @@ TurboDL is an extremely smart and efficient download manager for various cases.
 - Retries failed requests.
 - Automatically detects the file type, name, extension, and size.
 - Automatically handles redirects.
+- Automatically validates the hash of the downloaded file.
 - Shows a fancy and precise progress bar.
 
 <br>
@@ -29,7 +30,6 @@ pip install -U turbodl  # Install the latest version of TurboDL
 
 ```python
 from turbodl import TurboDL
-from pathlib import Path  # Optional
 
 
 turbodl = TurboDL(
@@ -43,7 +43,9 @@ turbodl = TurboDL(
 
 turbodl.download(
     url='https://example.com/file.txt',
-    output_path=Path.cwd()
+    output_path='path/to/file',
+    expected_hash='********',  # Or None if you don't want to check the hash
+    hash_type='sha256'
 )
 # >>> file.txt ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 35.6/35.6 kB 36.2 MB/s 0:00:00 100%
 
