@@ -4,7 +4,7 @@ from concurrent.futures import ThreadPoolExecutor
 from functools import lru_cache
 from hashlib import new as hashlib_new
 from io import BytesIO
-from math import ceil, sqrt, log2
+from math import ceil, log2, sqrt
 from mimetypes import guess_extension as guess_mimetype_extension
 from os import PathLike
 from pathlib import Path
@@ -13,6 +13,7 @@ from urllib.parse import unquote, urlparse
 
 # Third-party imports
 from httpx import Client, HTTPStatusError
+from psutil import virtual_memory
 from rich.progress import BarColumn, DownloadColumn, Progress, TextColumn, TimeRemainingColumn, TransferSpeedColumn
 from tenacity import retry, stop_after_attempt, wait_exponential
 
@@ -65,55 +66,104 @@ class TurboDL:
 
         self._client: Client = Client(headers=self._custom_headers, follow_redirects=True, verify=True, timeout=self._timeout)
 
-        self._buffer_size: int = 1024 * 1024
+        self._buffer_size: int = self._get_optimal_buffer_size()
         self._buffer_pool: Dict[int, memoryview] = {}
         self._active_buffers: Set[int] = set()
 
-        for i in range(32):
-            buffer = memoryview(array('B', [0] * self._buffer_size))
-            self._buffer_pool[i] = buffer
+        for i in range(8):
+            self._buffer_pool[i] = memoryview(array('B', [0] * self._buffer_size))
 
         self.output_path: str = None
 
-    def _get_buffer(self) -> memoryview:
-        for i, buffer in self._buffer_pool.items():
-            if i not in self._active_buffers:
-                self._active_buffers.add(i)
-                return buffer
+    @lru_cache(maxsize=1)
+    def _get_optimal_buffer_size(self) -> int:
+        """
+        Calculate the optimal buffer size based on system memory and performance factors.
 
-        return memoryview(array('B', [0] * self._buffer_size))
+        The calculation considers:
+        - Available system memory
+        - Minimum buffer requirements
+        - Power of 2 alignment for better performance
+        - Maximum practical buffer size limits
+
+        Returns:
+            Optimal buffer size in bytes aligned to system parameters
+        """
+
+        try:
+            base_size = virtual_memory().available // 64
+            power = max(20, min(23, (base_size - 1).bit_length()))
+            optimal_size = 1 << power
+
+            return max(1024 * 1024, min(optimal_size, 8 * 1024 * 1024))
+        except Exception:
+            return 1024 * 1024
+
+    def _get_buffer(self) -> memoryview:
+        """
+        Get a buffer from the buffer pool.
+
+        Returns:
+            A memoryview object representing the buffer.
+        """
+
+        try:
+            for i, buffer in self._buffer_pool.items():
+                if i not in self._active_buffers:
+                    self._active_buffers.add(i)
+                    return buffer
+
+            self._expand_buffer_pool()
+            return self._get_buffer()
+        except Exception:
+            return memoryview(array('B', [0] * self._buffer_size))
 
     def _release_buffer(self, buffer: memoryview) -> None:
+        """
+        Release a buffer back to the buffer pool.
+
+        Args:
+            buffer: A memoryview object representing the buffer to be released.
+        """
+
         for i, pool_buffer in self._buffer_pool.items():
             if pool_buffer == buffer:
                 self._active_buffers.remove(i)
                 break
 
-    @lru_cache()
+    def _expand_buffer_pool(self) -> None:
+        current_size = len(self._buffer_pool)
+        new_size = min(current_size + 4, 32)
+
+        for i in range(current_size, new_size):
+            self._buffer_pool[i] = memoryview(array('B', [0] * self._buffer_size))
+
+    @lru_cache(maxsize=256)
     def _calculate_connections(self, file_size: int, connection_speed: Union[float, Literal['auto']]) -> int:
         """
         Calculates the optimal number of connections based on file size and connection speed.
 
-        The formula uses an adjusted logarithmic function that considers:
-        - File size in MB
-        - Connection speed in Mbps
-        - TCP connection physical limits
-        - Thread management overhead
+        Uses a sophisticated formula that considers:
+        - File size scaling using logarithmic growth
+        - Connection speed with square root scaling
+        - System resource optimization
+        - Network overhead management
 
-        Base formula:
-        \[ connections = \min(32, \max(1, \lceil \alpha \cdot \log_{2}(S) \cdot \sqrt{\frac{V}{100}} \rceil)) \]
+        Formula:
+        \[ connections = 2 \cdot \left\lceil\frac{\beta \cdot \log_2(1 + \frac{S}{M}) \cdot \sqrt{\frac{V}{100}}}{2}\right\rceil \]
 
         Where:
         - S: File size in MB
         - V: Connection speed in Mbps
-        - α: Adjustment factor (4.2)
+        - M: Base size factor (1 MB)
+        - β: Dynamic coefficient (5.6)
 
         Args:
             file_size: File size in bytes
             connection_speed: Connection speed in Mbps
 
         Returns:
-            Number of connections to be used (between 1 and 32)
+            Even number of connections between 2 and 32
         """
 
         if self._max_connections != 'auto':
@@ -122,10 +172,11 @@ class TurboDL:
         file_size_mb = file_size / (1024 * 1024)
         speed = 80.0 if connection_speed == 'auto' else float(connection_speed)
 
-        alpha = 4.2
-        connections = alpha * log2(max(1, file_size_mb)) * sqrt(speed/100)
+        beta = 5.6
+        base_size = 1.0
+        conn_float = beta * log2(1 + file_size_mb / base_size) * sqrt(speed / 100)
 
-        return max(1, min(32, ceil(connections)))
+        return max(2, min(32, 2 * ceil(conn_float / 2)))
 
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=5), reraise=True)
     def _get_file_info(self, url: str) -> Tuple[int, str, str]:
@@ -147,30 +198,33 @@ class TurboDL:
         """
 
         try:
-            r = self._client.head(url)
-            r.raise_for_status()
+            with self._client.stream('HEAD', url) as r:
+                r.raise_for_status()
+                headers = r.headers
+
+                content_length = int(headers.get('content-length', 0))
+                content_type = headers.get('content-type', 'application/octet-stream').split(';')[0].strip()
+
+                if content_disposition := headers.get('content-disposition'):
+                    if 'filename*=' in content_disposition:
+                        filename = content_disposition.split('filename*=')[-1].split("'")[-1]
+                    elif 'filename=' in content_disposition:
+                        filename = content_disposition.split('filename=')[-1].strip('"\'')
+                    else:
+                        filename = None
+                else:
+                    filename = None
+
+                if not filename:
+                    filename = (
+                        Path(unquote(urlparse(url).path)).name or f'downloaded_file{guess_mimetype_extension(content_type) or ""}'
+                    )
+
+                return (content_length, content_type, filename)
         except HTTPStatusError as e:
-            raise RequestError(f'An error occurred while getting file info: {str(e)}') from e
+            raise RequestError(f'Request failed with status code "{e.response.status_code}"') from e
 
-        content_length = int(r.headers.get('content-length', 0))
-        content_type = r.headers.get('content-type', 'application/octet-stream').split(';')[0]
-        content_disposition = r.headers.get('content-disposition')
-
-        if content_disposition and 'filename=' in content_disposition:
-            filename = content_disposition.split('filename=')[-1].strip('"\'')
-        else:
-            path = unquote(urlparse(url).path)
-            filename = Path(path).name
-
-            if not filename:
-                extension = guess_mimetype_extension(content_type)
-
-                if extension:
-                    filename = 'downloaded_file' + extension
-
-        return (content_length, content_type, filename)
-
-    @lru_cache()
+    @lru_cache(maxsize=256)
     def _get_chunk_ranges(self, total_size: int) -> List[Tuple[int, int]]:
         """
         Calculate and return the chunk ranges for downloading a file.
@@ -301,8 +355,8 @@ class TurboDL:
         """
 
         try:
-            total_size, mime_type, suggested_filename = self._get_file_info(url)
             output_path = Path(output_path)
+            total_size, mime_type, suggested_filename = self._get_file_info(url)
 
             if output_path.is_dir():
                 output_path = Path(output_path, suggested_filename)
