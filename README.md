@@ -8,6 +8,7 @@
 
 TurboDL is an extremely smart and efficient download manager for various cases.
 
+- Support for the modern HTTP/2 protocol for faster downloads.
 - Built-in download acceleration.
 - Uses your connection speed to download even more efficiently.
 - Retries failed requests.
