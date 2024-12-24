@@ -79,7 +79,7 @@ class TurboDL:
             progress.update(task, advance=20)
 
             self._client: Client = Client(
-                headers=self._custom_headers, follow_redirects=True, verify=True, timeout=self._timeout, http2=True
+                headers=self._custom_headers, follow_redirects=True, verify=True, http2=True, timeout=self._timeout
             )
             progress.update(task, advance=20)
 

@@ -30,7 +30,7 @@ classifiers = [
 
 [tool.poetry.dependencies]
 python = "^3.9"
-httpx = { version = "0.28.1", optional = false }
+httpx = { version = "0.28.1", extras = ["http2"], optional = false }
 psutil = { version = "6.1.1", optional = false }
 rich = { version = "13.9.4", optional = false }
 tenacity = { version = "9.0.0", optional = false }
