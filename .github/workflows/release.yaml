@@ -42,7 +42,7 @@ jobs:
       - name: 📝 Generate Commit List
         id: commit_list
         run: |
-          COMMITS=$(git log --pretty=format:"- [%s](https://github.com/${{ github.repository }}/commit/%H)" ${{ steps.previoustag.outputs.tag }}..HEAD)
+          COMMITS=$(git log --pretty=format:"- [%s](https://github.com/${{ github.repository }}/commit/%H)" ${{ steps.previoustag.outputs.tag }}..HEAD | grep -v "^- \[Bump version to" || echo "- No significant changes in this release")
           echo "commits<<EOF" >> $GITHUB_OUTPUT
           echo "$COMMITS" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
