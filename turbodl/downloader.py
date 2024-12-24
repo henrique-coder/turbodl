@@ -12,7 +12,7 @@ from typing import Any, Dict, List, Literal, Optional, Set, Tuple, Union
 from urllib.parse import unquote, urlparse
 
 # Third-party imports
-from httpx import Client, HTTPStatusError
+from httpx import Client, Limits, HTTPStatusError
 from psutil import virtual_memory
 from rich.progress import BarColumn, DownloadColumn, Progress, SpinnerColumn, TextColumn, TimeRemainingColumn, TransferSpeedColumn
 from tenacity import retry, stop_after_attempt, wait_exponential
@@ -45,11 +45,14 @@ class TurboDL:
             show_progress_bar: Show or hide the download progress bar. (default: True)
             custom_headers: Custom headers to include in the request. If None, default headers will be used. Imutable headers are 'Accept-Encoding' and 'Range'. (default: None)
             timeout: Timeout in seconds for the download process. Or None for no timeout. (default: None)
+
+        Raises:
+            ValueError: If max_connections is not between 1 and 32 or connection_speed is not positive.
         """
 
         with Progress(
             SpinnerColumn(spinner_name='dots', style='bold cyan'),
-            TextColumn('[bold cyan]Optimizing download settings...', justify='left'),
+            TextColumn('[bold cyan]Generating the best settings...', justify='left'),
             BarColumn(bar_width=40, style='cyan', complete_style='green'),
             TimeRemainingColumn(),
             TextColumn('[bold][progress.percentage]{task.percentage:>3.0f}%'),
@@ -60,6 +63,14 @@ class TurboDL:
 
             self._max_connections: Union[int, Literal['auto']] = max_connections
             self._connection_speed: int = connection_speed
+
+            if isinstance(self._max_connections, int):
+                if not 1 <= self._max_connections <= 32:
+                    raise ValueError('max_connections must be between 1 and 32')
+
+            if self._connection_speed <= 0:
+                raise ValueError('connection_speed must be positive')
+
             self._overwrite: bool = overwrite
             self._show_progress_bar: bool = show_progress_bar
             self._timeout: Optional[int] = timeout
@@ -79,7 +90,12 @@ class TurboDL:
             progress.update(task, advance=20)
 
             self._client: Client = Client(
-                headers=self._custom_headers, follow_redirects=True, verify=True, http2=True, timeout=self._timeout
+                headers=self._custom_headers,
+                follow_redirects=True,
+                verify=True,
+                http2=True,
+                limits=Limits(max_keepalive_connections=32, max_connections=64, keepalive_expiry=30.0),
+                timeout=self._timeout,
             )
             progress.update(task, advance=20)
 
@@ -95,7 +111,10 @@ class TurboDL:
 
             self.output_path: str = None
 
-    @lru_cache(maxsize=1)
+    def __enter__(self) -> 'TurboDL':
+        return self
+
+    @lru_cache(maxsize=512)
     def _get_optimal_buffer_size(self) -> int:
         """
         Calculate the optimal buffer size based on system memory and performance factors.
@@ -111,11 +130,9 @@ class TurboDL:
         """
 
         try:
-            base_size = virtual_memory().available // 64
-            power = max(20, min(23, (base_size - 1).bit_length()))
-            optimal_size = 1 << power
-
-            return max(1024 * 1024, min(optimal_size, 8 * 1024 * 1024))
+            base_size = int(virtual_memory().available * 0.75) // 64
+            power = max(20, min(24, (base_size - 1).bit_length()))
+            return 1 << power
         except Exception:
             return 1024 * 1024
 
@@ -157,6 +174,18 @@ class TurboDL:
 
         for i in range(current_size, new_size):
             self._buffer_pool[i] = memoryview(array('B', [0] * self._buffer_size))
+
+    def _verify_chunk_integrity(self, chunk: bytes, expected_size: int) -> bool:
+        if not chunk:
+            return False
+
+        if len(chunk) != expected_size:
+            return False
+
+        if all(b == 0 for b in chunk[: min(len(chunk), 1024)]):
+            return False
+
+        return True
 
     @lru_cache(maxsize=256)
     def _calculate_connections(self, file_size: int, connection_speed: Union[float, Literal['auto']]) -> int:
@@ -320,6 +349,9 @@ class TurboDL:
 
                     if current_size <= 0:
                         break
+
+                    if not self._verify_chunk_integrity(chunk[:current_size], current_size):
+                        raise DownloadError(f'Invalid chunk integrity for chunk {start}-{end}')
 
                     buffer[:current_size] = chunk[:current_size]
                     output_buffer.write(buffer[:current_size])
