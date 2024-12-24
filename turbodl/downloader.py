@@ -22,7 +22,9 @@ from .exceptions import DownloadError, HashVerificationError, RequestError
 
 
 class TurboDL:
-    """A class for downloading direct download URLs."""
+    """
+    A class for downloading direct download URLs.
+    """
 
     def __init__(
         self,
@@ -74,7 +76,6 @@ class TurboDL:
             self._overwrite: bool = overwrite
             self._show_progress_bar: bool = show_progress_bar
             self._timeout: Optional[int] = timeout
-            progress.update(task, advance=20)
 
             self._custom_headers: Dict[Any, Any] = {
                 'Accept': '*/*',
@@ -97,21 +98,28 @@ class TurboDL:
                 limits=Limits(max_keepalive_connections=32, max_connections=64, keepalive_expiry=30.0),
                 timeout=self._timeout,
             )
-            progress.update(task, advance=20)
+            progress.update(task, advance=40)
 
             self._buffer_size: int = min(8 * 1024 * 1024, max(1024 * 1024, self._get_optimal_buffer_size()))
             self._buffer_pool: Dict[int, memoryview] = {}
             self._active_buffers: Set[int] = set()
             progress.update(task, advance=20)
 
-            for i in range(8):
+            for i in range(4):
                 self._buffer_pool[i] = memoryview(array('B', [0] * self._buffer_size))
-
-            progress.update(task, advance=20)
 
             self.output_path: str = None
 
+            progress.update(task, advance=20)
+
     def __enter__(self) -> 'TurboDL':
+        """
+        Enter the context manager.
+
+        Returns:
+            The TurboDL instance.
+        """
+
         return self
 
     @lru_cache(maxsize=512)
@@ -130,8 +138,8 @@ class TurboDL:
         """
 
         try:
-            base_size = int(virtual_memory().available * 0.75) // 64
-            power = max(20, min(24, (base_size - 1).bit_length()))
+            base_size = int(virtual_memory().available * 0.40) // 64
+            power = max(20, min(23, (base_size - 1).bit_length()))
             return 1 << power
         except Exception:
             return 1024 * 1024
@@ -169,13 +177,32 @@ class TurboDL:
                 break
 
     def _expand_buffer_pool(self) -> None:
+        """
+        Expand the buffer pool if necessary.
+        """
+
         current_size = len(self._buffer_pool)
-        new_size = min(current_size + 4, 32)
+
+        if current_size >= 32:
+            return None
+
+        new_size = min(current_size + 2, 32)
 
         for i in range(current_size, new_size):
             self._buffer_pool[i] = memoryview(array('B', [0] * self._buffer_size))
 
     def _verify_chunk_integrity(self, chunk: bytes, expected_size: int) -> bool:
+        """
+        Verify the integrity of a chunk of data.
+
+        Args:
+            chunk: The chunk of data to verify.
+            expected_size: The expected size of the chunk.
+
+        Returns:
+            True if the chunk is valid, False otherwise.
+        """
+
         if not chunk:
             return False
 
