@@ -8,14 +8,14 @@
 
 TurboDL ia an extremely smart, fast and efficient download manager with several automations.
 
-- Support for the modern HTTP/2 protocol for faster downloads.
-- Built-in download acceleration.
-- Uses your connection speed to download even more efficiently.
-- Retries failed requests.
-- Automatically detects the file type, name, extension, and size.
+- Uses HTTP/2 protocol to download files.
+- Built-in sophisticated download acceleration technique.
+- Retry failed requests efficiently.
+- Automatically detects file information before download.
 - Automatically handles redirects.
-- Automatically validates the hash of the downloaded file.
-- Shows a fancy and precise progress bar.
+- Verifies the integrity of each chunk in real time.
+- Supports post-download hash verification.
+- Accurately displays a beautiful progress bar.
 
 <br>
 
@@ -45,7 +45,7 @@ turbodl = TurboDL(
 turbodl.download(
     url='https://example.com/file.txt',
     output_path='path/to/file',
-    expected_hash='********',  # Or None if you don't want to check the hash
+    expected_hash='0a1b2c3d4e5f6g7h8i9j',  # Or None if you don't want to check the hash
     hash_type='sha256'
 )
 # >>> file.txt ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 35.6/35.6 kB 36.2 MB/s 0:00:00 100%
