@@ -5,7 +5,7 @@ from math import ceil
 from mimetypes import guess_extension as guess_mimetype_extension
 from os import PathLike
 from pathlib import Path
-from typing import Dict, List, Literal, Optional, Tuple, Union
+from typing import Any, Dict, List, Literal, Optional, Tuple, Union
 from urllib.parse import unquote, urlparse
 
 # Third-party imports
@@ -26,7 +26,7 @@ class TurboDL:
         connection_speed: float = 80,
         overwrite: bool = True,
         show_progress_bar: bool = True,
-        custom_headers: Optional[Dict[str, str]] = None,
+        custom_headers: Optional[Dict[Any, Any]] = None,
         timeout: Optional[int] = None,
     ) -> None:
         """
@@ -34,7 +34,7 @@ class TurboDL:
 
         Args:
             max_connections: The maximum number of connections to use for downloading the file. (default: 'auto')
-            connection_speed: The connection speed in Mbps. (default: 80)
+            connection_speed: The connection speed in Mbps (megabits per second). (default: 80)
             overwrite: Overwrite the file if it already exists. Otherwise, a "_1", "_2", etc. suffix will be added. (default: True)
             show_progress_bar: Show or hide the download progress bar. (default: True)
             custom_headers: Custom headers to include in the request. If None, default headers will be used. Imutable headers are 'Accept-Encoding' and 'Range'. (default: None)
@@ -49,7 +49,7 @@ class TurboDL:
 
         imutable_headers = ['Accept-Encoding', 'Range']
 
-        self._custom_headers: Dict[str, str] = {
+        self._custom_headers: Dict[Any, Any] = {
             'Accept': '*/*',
             'Accept-Encoding': 'identity',
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
@@ -177,6 +177,7 @@ class TurboDL:
 
         return (content_length, content_type, filename)
 
+    @lru_cache()
     def _get_chunk_ranges(self, total_size: int) -> List[Tuple[int, int]]:
         """
         Calculate and return the chunk ranges for downloading a file.
@@ -232,10 +233,9 @@ class TurboDL:
             DownloadError: If an error occurs while downloading the chunk.
         """
 
-        headers = {**self._custom_headers}
-
-        chunk_size = min(8192, end - start + 1)
         buffer = bytearray()
+        headers = {**self._custom_headers}
+        chunk_size = min(8192, end - start + 1)
 
         if end > 0:
             headers['Range'] = f'bytes={start}-{end}'
@@ -301,9 +301,7 @@ class TurboDL:
 
                 if total_size == 0:
                     chunk = self._download_chunk(url, 0, 0, progress, task_id)
-
-                    with Path(output_path).open('wb') as fo:
-                        fo.write(chunk)
+                    Path(output_path).write_bytes(chunk)
                 else:
                     chunks = []
                     ranges = self._get_chunk_ranges(total_size)
