@@ -1,10 +1,12 @@
 # Built-in imports
 from concurrent.futures import ThreadPoolExecutor
 from functools import lru_cache
+from hashlib import new as hashlib_new
 from math import ceil
 from mimetypes import guess_extension as guess_mimetype_extension
 from os import PathLike
 from pathlib import Path
+from queue import Queue
 from typing import Any, Dict, List, Literal, Optional, Tuple, Union
 from urllib.parse import unquote, urlparse
 
@@ -14,7 +16,7 @@ from rich.progress import BarColumn, DownloadColumn, Progress, TextColumn, TimeR
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 # Local imports
-from .exceptions import DownloadError, RequestError
+from .exceptions import DownloadError, HashVerificationError, RequestError
 
 
 class TurboDL:
@@ -61,6 +63,12 @@ class TurboDL:
                     self._custom_headers[key.title()] = value
 
         self._client: Client = Client(headers=self._custom_headers, follow_redirects=True, timeout=self._timeout)
+
+        self._buffer_pool = Queue()
+        self._buffer_size = 8192
+
+        for _ in range(32):
+            self._buffer_pool.put(bytearray(self._buffer_size))
 
         self.output_path: str = None
 
@@ -233,7 +241,7 @@ class TurboDL:
             DownloadError: If an error occurs while downloading the chunk.
         """
 
-        buffer = bytearray()
+        buffer = self._buffer_pool.get()
         headers = {**self._custom_headers}
         chunk_size = min(8192, end - start + 1)
 
@@ -251,8 +259,31 @@ class TurboDL:
             return bytes(buffer)
         except HTTPStatusError as e:
             raise DownloadError(f'An error occurred while downloading chunk: {str(e)}') from e
+        finally:
+            self._buffer_pool.put(buffer)
 
-    def download(self, url: str, output_path: Union[str, PathLike] = Path.cwd()) -> None:
+    def download(
+        self,
+        url: str,
+        output_path: Union[str, PathLike] = Path.cwd(),
+        expected_hash: Optional[str] = None,
+        hash_type: Literal[
+            'md5',
+            'sha1',
+            'sha224',
+            'sha256',
+            'sha384',
+            'sha512',
+            'blake2b',
+            'blake2s',
+            'sha3_224',
+            'sha3_256',
+            'sha3_384',
+            'sha3_512',
+            'shake_128',
+            'shake_256',
+        ] = 'sha256',
+    ):
         """
         Downloads a file from the provided URL to the output file path.
 
@@ -266,6 +297,7 @@ class TurboDL:
 
         Raises:
             DownloadError: If an error occurs while downloading the file.
+            HashVerificationError: If the hash of the downloaded file does not match the expected hash.
             RequestError: If an error occurs while getting file info.
         """
 
@@ -316,5 +348,25 @@ class TurboDL:
                     with Path(output_path).open('wb') as fo:
                         for chunk in chunks:
                             fo.write(chunk)
+        except KeyboardInterrupt:
+            Path(output_path).unlink(missing_ok=True)
+            self.output_path = None
+            return
         except Exception as e:
             raise DownloadError(f'An error occurred while downloading file: {str(e)}') from e
+
+        if expected_hash is not None:
+            hasher = hashlib_new(hash_type)
+
+            with Path(output_path).open('rb') as f:
+                for chunk in iter(lambda: f.read(8192), b''):
+                    hasher.update(chunk)
+
+            file_hash = hasher.hexdigest()
+
+            if file_hash != expected_hash:
+                Path(output_path).unlink(missing_ok=True)
+                self.output_path = None
+                raise HashVerificationError(
+                    f'Hash verification failed. Hash type: "{hash_type}". Expected hash: "{expected_hash}". Actual hash: "{file_hash}"'
+                )
