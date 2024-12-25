@@ -1,4 +1,5 @@
 httpx[http2] == 0.28.1
+numpy == 2.2.1
 psutil == 6.1.1
 rich == 13.9.4
 tenacity == 9.0.0

@@ -2,7 +2,7 @@
 from concurrent.futures import ThreadPoolExecutor
 from functools import lru_cache
 from hashlib import new as hashlib_new
-from math import ceil, log2, sqrt
+from math import ceil
 from mimetypes import guess_extension as guess_mimetype_extension
 from os import PathLike
 from pathlib import Path
@@ -11,6 +11,7 @@ from urllib.parse import unquote, urlparse
 
 # Third-party imports
 from httpx import Client, HTTPStatusError, Limits
+from numpy import array, log2, sqrt
 from psutil import disk_usage
 from rich.progress import BarColumn, DownloadColumn, Progress, SpinnerColumn, TextColumn, TimeRemainingColumn, TransferSpeedColumn
 from tenacity import retry, stop_after_attempt, wait_exponential
@@ -140,14 +141,14 @@ class TurboDL:
         if self._max_connections != 'auto':
             return self._max_connections
 
-        file_size_mb = file_size / (1024 * 1024)
-        speed = 80.0 if connection_speed == 'auto' else float(connection_speed)
+        file_size_mb = array([file_size / (1024 * 1024)])
+        speed = array([80.0 if connection_speed == 'auto' else float(connection_speed)])
 
         beta = 5.6
         base_size = 1.0
         conn_float = beta * log2(1 + file_size_mb / base_size) * sqrt(speed / 100)
 
-        return max(2, min(32, 2 * ceil(conn_float / 2)))
+        return max(2, min(32, 2 * ceil(float(conn_float) / 2)))
 
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=5), reraise=True)
     def _get_file_info(self, url: str) -> Tuple[int, str, str]:
