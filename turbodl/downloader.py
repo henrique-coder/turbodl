@@ -10,12 +10,13 @@ from typing import Any, Dict, List, Literal, Optional, Tuple, Union
 from urllib.parse import unquote, urlparse
 
 # Third-party imports
-from httpx import Client, Limits, HTTPStatusError
+from httpx import Client, HTTPStatusError, Limits
+from psutil import disk_usage
 from rich.progress import BarColumn, DownloadColumn, Progress, SpinnerColumn, TextColumn, TimeRemainingColumn, TransferSpeedColumn
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 # Local imports
-from .exceptions import DownloadError, HashVerificationError, RequestError
+from .exceptions import DownloadError, HashVerificationError, InsufficientSpaceError, RequestError
 
 
 class TurboDL:
@@ -97,6 +98,16 @@ class TurboDL:
             self.output_path: str = None
 
             progress.update(task, advance=100)
+
+    @lru_cache(maxsize=256)
+    def _is_enough_space_to_download(self, path: Union[str, PathLike], size: int) -> None:
+        path = Path(path).resolve()
+
+        required_space = size + (1 * 1024 * 1024 * 1024)
+        disk_stats = disk_usage(path.as_posix())
+
+        if disk_stats.free < required_space:
+            raise InsufficientSpaceError(f'Not enough space to download {size} bytes to "{path.as_posix()}"')
 
     @lru_cache(maxsize=256)
     def _calculate_connections(self, file_size: int, connection_speed: Union[float, Literal['auto']]) -> int:
@@ -295,6 +306,7 @@ class TurboDL:
         Raises:
             DownloadError: If an error occurs while downloading the file.
             HashVerificationError: If the hash of the downloaded file does not match the expected hash.
+            InsufficientSpaceError: If there is not enough space to download the file.
             RequestError: If an error occurs while getting file info.
         """
 
@@ -302,7 +314,12 @@ class TurboDL:
 
         try:
             total_size, _, suggested_filename = self._get_file_info(url)
+        except RequestError as e:
+            raise DownloadError(f'An error occurred while getting file info: {str(e)}') from e
 
+        self._is_enough_space_to_download(output_path, total_size)
+
+        try:
             if output_path.is_dir():
                 output_path = Path(output_path, suggested_filename)
 
@@ -347,8 +364,6 @@ class TurboDL:
             Path(output_path).unlink(missing_ok=True)
             self.output_path = None
             return None
-        except RequestError as e:
-            raise DownloadError(f'An error occurred while getting file info: {str(e)}') from e
         except Exception as e:
             raise DownloadError(f'An error occurred while downloading file: {str(e)}') from e
 

@@ -16,6 +16,12 @@ class HashVerificationError(TurboDLError):
     pass
 
 
+class InsufficientSpaceError(TurboDLError):
+    """Exception raised when there is not enough space to download the file."""
+
+    pass
+
+
 class RequestError(TurboDLError):
     """Exception raised when an error occurs while making a request."""
 
