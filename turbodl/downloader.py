@@ -1,19 +1,16 @@
 # Built-in imports
-from array import array
 from concurrent.futures import ThreadPoolExecutor
 from functools import lru_cache
 from hashlib import new as hashlib_new
-from io import BytesIO
 from math import ceil, log2, sqrt
 from mimetypes import guess_extension as guess_mimetype_extension
 from os import PathLike
 from pathlib import Path
-from typing import Any, Dict, List, Literal, Optional, Set, Tuple, Union
+from typing import Any, Dict, List, Literal, Optional, Tuple, Union
 from urllib.parse import unquote, urlparse
 
 # Third-party imports
 from httpx import Client, Limits, HTTPStatusError
-from psutil import virtual_memory
 from rich.progress import BarColumn, DownloadColumn, Progress, SpinnerColumn, TextColumn, TimeRemainingColumn, TransferSpeedColumn
 from tenacity import retry, stop_after_attempt, wait_exponential
 
@@ -88,8 +85,6 @@ class TurboDL:
                     if key.title() not in ['Accept-Encoding', 'Range']:
                         self._custom_headers[key.title()] = value
 
-            progress.update(task, advance=20)
-
             self._client: Client = Client(
                 headers=self._custom_headers,
                 follow_redirects=True,
@@ -98,121 +93,10 @@ class TurboDL:
                 limits=Limits(max_keepalive_connections=32, max_connections=64, keepalive_expiry=30.0),
                 timeout=self._timeout,
             )
-            progress.update(task, advance=40)
-
-            self._buffer_size: int = min(8 * 1024 * 1024, max(1024 * 1024, self._get_optimal_buffer_size()))
-            self._buffer_pool: Dict[int, memoryview] = {}
-            self._active_buffers: Set[int] = set()
-            progress.update(task, advance=20)
-
-            for i in range(4):
-                self._buffer_pool[i] = memoryview(array('B', [0] * self._buffer_size))
 
             self.output_path: str = None
 
-            progress.update(task, advance=20)
-
-    def __enter__(self) -> 'TurboDL':
-        """
-        Enter the context manager.
-
-        Returns:
-            The TurboDL instance.
-        """
-
-        return self
-
-    @lru_cache(maxsize=512)
-    def _get_optimal_buffer_size(self) -> int:
-        """
-        Calculate the optimal buffer size based on system memory and performance factors.
-
-        The calculation considers:
-        - Available system memory
-        - Minimum buffer requirements
-        - Power of 2 alignment for better performance
-        - Maximum practical buffer size limits
-
-        Returns:
-            Optimal buffer size in bytes aligned to system parameters
-        """
-
-        try:
-            base_size = int(virtual_memory().available * 0.40) // 64
-            power = max(20, min(23, (base_size - 1).bit_length()))
-            return 1 << power
-        except Exception:
-            return 1024 * 1024
-
-    def _get_buffer(self) -> memoryview:
-        """
-        Get a buffer from the buffer pool.
-
-        Returns:
-            A memoryview object representing the buffer.
-        """
-
-        try:
-            for i, buffer in self._buffer_pool.items():
-                if i not in self._active_buffers:
-                    self._active_buffers.add(i)
-                    return buffer
-
-            self._expand_buffer_pool()
-            return self._get_buffer()
-        except Exception:
-            return memoryview(array('B', [0] * self._buffer_size))
-
-    def _release_buffer(self, buffer: memoryview) -> None:
-        """
-        Release a buffer back to the buffer pool.
-
-        Args:
-            buffer: A memoryview object representing the buffer to be released.
-        """
-
-        for i, pool_buffer in self._buffer_pool.items():
-            if pool_buffer == buffer:
-                self._active_buffers.remove(i)
-                break
-
-    def _expand_buffer_pool(self) -> None:
-        """
-        Expand the buffer pool if necessary.
-        """
-
-        current_size = len(self._buffer_pool)
-
-        if current_size >= 32:
-            return None
-
-        new_size = min(current_size + 2, 32)
-
-        for i in range(current_size, new_size):
-            self._buffer_pool[i] = memoryview(array('B', [0] * self._buffer_size))
-
-    def _verify_chunk_integrity(self, chunk: bytes, expected_size: int) -> bool:
-        """
-        Verify the integrity of a chunk of data.
-
-        Args:
-            chunk: The chunk of data to verify.
-            expected_size: The expected size of the chunk.
-
-        Returns:
-            True if the chunk is valid, False otherwise.
-        """
-
-        if not chunk:
-            return False
-
-        if len(chunk) != expected_size:
-            return False
-
-        if all(b == 0 for b in chunk[: min(len(chunk), 1024)]):
-            return False
-
-        return True
+            progress.update(task, advance=100)
 
     @lru_cache(maxsize=256)
     def _calculate_connections(self, file_size: int, connection_speed: Union[float, Literal['auto']]) -> int:
@@ -276,8 +160,8 @@ class TurboDL:
         try:
             with self._client.stream('HEAD', url) as r:
                 r.raise_for_status()
-                headers = r.headers
 
+                headers = r.headers
                 content_length = int(headers.get('content-length', 0))
                 content_type = headers.get('content-type', 'application/octet-stream').split(';')[0].strip()
 
@@ -324,14 +208,13 @@ class TurboDL:
 
         ranges = []
         start = 0
-        remaining = total_size
 
-        while remaining > 0:
-            current_chunk = min(chunk_size, remaining)
+        while total_size > 0:
+            current_chunk = min(chunk_size, total_size)
             end = start + current_chunk - 1
             ranges.append((start, end))
             start = end + 1
-            remaining -= current_chunk
+            total_size -= current_chunk
 
         return ranges
 
@@ -357,42 +240,24 @@ class TurboDL:
             DownloadError: If an error occurs while downloading the chunk.
         """
 
-        buffer = self._get_buffer()
-        output_buffer = BytesIO()
-
         headers = {**self._custom_headers}
-        chunk_size = end - start + 1
+
+        if end > 0:
+            headers['Range'] = f'bytes={start}-{end}'
 
         try:
-            if end > 0:
-                headers['Range'] = f'bytes={start}-{end}'
-
             with self._client.stream('GET', url, headers=headers) as r:
                 r.raise_for_status()
-                downloaded = 0
 
-                for chunk in r.iter_bytes(chunk_size=min(self._buffer_size, chunk_size)):
-                    current_size = min(len(chunk), chunk_size - downloaded)
+                chunk = b''
 
-                    if current_size <= 0:
-                        break
+                for data in r.iter_bytes(chunk_size=8192):
+                    chunk += data
+                    progress.update(task_id, advance=len(data))
 
-                    if not self._verify_chunk_integrity(chunk[:current_size], current_size):
-                        raise DownloadError(f'Invalid chunk integrity for chunk {start}-{end}')
-
-                    buffer[:current_size] = chunk[:current_size]
-                    output_buffer.write(buffer[:current_size])
-                    progress.update(task_id, advance=current_size)
-                    downloaded += current_size
-
-                    if downloaded >= chunk_size:
-                        break
-
-            return output_buffer.getvalue()
+                return chunk
         except HTTPStatusError as e:
             raise DownloadError(f'An error occurred while downloading chunk: {str(e)}') from e
-        finally:
-            self._release_buffer(buffer)
 
     def download(
         self,
@@ -433,8 +298,9 @@ class TurboDL:
             RequestError: If an error occurs while getting file info.
         """
 
+        output_path = Path(output_path)
+
         try:
-            output_path = Path(output_path)
             total_size, _, suggested_filename = self._get_file_info(url)
 
             if output_path.is_dir():
@@ -463,27 +329,26 @@ class TurboDL:
             with Progress(*progress_columns, disable=not self._show_progress_bar) as progress:
                 task_id = progress.add_task('download', total=total_size or 100, filename=output_path.name)
 
-                if total_size == 0:
-                    chunk = self._download_chunk(url, 0, 0, progress, task_id)
-                    Path(output_path).write_bytes(chunk)
-                else:
-                    chunks = []
-                    ranges = self._get_chunk_ranges(total_size)
-                    connections = len(ranges)
+                with Path(output_path).open('wb') as fo:
+                    if total_size == 0:
+                        chunk = self._download_chunk(url, 0, 0, progress, task_id)
+                        fo.write(chunk)
+                    else:
+                        ranges = self._get_chunk_ranges(total_size)
 
-                    with ThreadPoolExecutor(max_workers=connections) as executor:
-                        futures = [
-                            executor.submit(self._download_chunk, url, start, end, progress, task_id) for start, end in ranges
-                        ]
-                        chunks = [f.result() for f in futures]
+                        with ThreadPoolExecutor(max_workers=len(ranges)) as executor:
+                            futures = [
+                                executor.submit(self._download_chunk, url, start, end, progress, task_id) for start, end in ranges
+                            ]
 
-                    with Path(output_path).open('wb') as fo:
-                        for chunk in chunks:
-                            fo.write(chunk)
+                            for future in futures:
+                                fo.write(future.result())
         except KeyboardInterrupt:
             Path(output_path).unlink(missing_ok=True)
             self.output_path = None
-            return
+            return None
+        except RequestError as e:
+            raise DownloadError(f'An error occurred while getting file info: {str(e)}') from e
         except Exception as e:
             raise DownloadError(f'An error occurred while downloading file: {str(e)}') from e
 
