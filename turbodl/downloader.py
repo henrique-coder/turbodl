@@ -1,4 +1,5 @@
 # Built-in imports
+from collections import deque
 from concurrent.futures import ThreadPoolExecutor
 from functools import lru_cache
 from hashlib import new as hashlib_new
@@ -6,17 +7,45 @@ from math import ceil, log2, sqrt
 from mimetypes import guess_extension as guess_mimetype_extension
 from os import PathLike
 from pathlib import Path
+from threading import Lock
+from time import sleep
 from typing import Any, Dict, List, Literal, Optional, Tuple, Union
 from urllib.parse import unquote, urlparse
 
 # Third-party imports
 from httpx import Client, HTTPStatusError, Limits
-from psutil import disk_usage
+from psutil import disk_usage, virtual_memory
 from rich.progress import BarColumn, DownloadColumn, Progress, SpinnerColumn, TextColumn, TimeRemainingColumn, TransferSpeedColumn
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 # Local imports
 from .exceptions import DownloadError, HashVerificationError, InsufficientSpaceError, RequestError
+
+
+class CircularBuffer:
+    def __init__(self, max_size_mb: int = 512) -> None:
+        self.buffer: deque = deque()
+        self.lock: Lock = Lock()
+        self.max_size: int = min(max_size_mb * 1024 * 1024, virtual_memory().available * 0.25)
+        self.current_size: int = 0
+
+    def write(self, data: bytes) -> None:
+        with self.lock:
+            self.buffer.append(data)
+            self.current_size += len(data)
+
+    def read(self) -> bytes:
+        with self.lock:
+            if not self.buffer:
+                return b''
+
+            data = self.buffer.popleft()
+            self.current_size -= len(data)
+
+            return data
+
+    def is_full(self) -> bool:
+        return self.current_size >= self.max_size
 
 
 class TurboDL:
@@ -43,7 +72,7 @@ class TurboDL:
             overwrite: Overwrite the file if it already exists. Otherwise, a "_1", "_2", etc. suffix will be added. (default: True)
             show_optimization_progress_bar: Show or hide the initial optimization progress bar. (default: True)
             show_progress_bar: Show or hide the download progress bar. (default: True)
-            custom_headers: Custom headers to include in the request. If None, default headers will be used. Imutable headers are 'Accept-Encoding' and 'Range'. (default: None)
+            custom_headers: Custom headers to include in the request. If None, default headers will be used. Imutable headers are 'Accept-Encoding', 'Connection' and 'Range'. (default: None)
             timeout: Timeout in seconds for the download process. Or None for no timeout. (default: None)
 
         Raises:
@@ -78,12 +107,13 @@ class TurboDL:
             self._custom_headers: Dict[Any, Any] = {
                 'Accept': '*/*',
                 'Accept-Encoding': 'identity',
+                'Connection': 'keep-alive',
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
             }
 
             if custom_headers:
                 for key, value in custom_headers.items():
-                    if key.title() not in ['Accept-Encoding', 'Range']:
+                    if key.title() not in ['Accept-Encoding', 'Range', 'Connection']:
                         self._custom_headers[key.title()] = value
 
             self._client: Client = Client(
@@ -99,15 +129,22 @@ class TurboDL:
 
             progress.update(task, advance=100)
 
-    @lru_cache(maxsize=256)
-    def _is_enough_space_to_download(self, path: Union[str, PathLike], size: int) -> None:
-        path = Path(path).resolve()
+    def _is_enough_space_to_download(self, path: Union[str, PathLike], size: int) -> bool:
+        """
+        Checks if there is enough space to download the file.
+
+        Args:
+            path: The path to save the downloaded file to.
+            size: The size of the file in bytes.
+        """
 
         required_space = size + (1 * 1024 * 1024 * 1024)
-        disk_stats = disk_usage(path.as_posix())
+        disk_stats = disk_usage(Path(path).as_posix())
 
         if disk_stats.free < required_space:
-            raise InsufficientSpaceError(f'Not enough space to download {size} bytes to "{path.as_posix()}"')
+            return False
+
+        return True
 
     @lru_cache(maxsize=256)
     def _calculate_connections(self, file_size: int, connection_speed: Union[float, Literal['auto']]) -> int:
@@ -169,7 +206,7 @@ class TurboDL:
         """
 
         try:
-            with self._client.stream('HEAD', url) as r:
+            with self._client.stream('HEAD', url, headers=self._custom_headers, timeout=self._timeout) as r:
                 r.raise_for_status()
 
                 headers = r.headers
@@ -270,6 +307,95 @@ class TurboDL:
         except HTTPStatusError as e:
             raise DownloadError(f'An error occurred while downloading chunk: {str(e)}') from e
 
+    def _download_with_buffer(
+        self, url: str, output_path: Union[str, PathLike], progress: Progress, task_id: int, total_size: int
+    ) -> None:
+        """
+        Downloads a file from the given URL using a buffer and multiple threads.
+
+        - This method downloads the file in chunks and writes them to a buffer.
+        - The buffer is then written to the output file in a separate thread.
+
+        Args:
+            url: The URL to download the file from. (required)
+            output_path: The path to save the downloaded file. (required)
+            progress: The Progress object to update with the download progress. (required)
+            task_id: The task ID to update in the Progress object. (required)
+            total_size: The total size of the file to be downloaded. (required)
+
+        Raises:
+            DownloadError: If an error occurs while downloading the file.
+        """
+
+        buffer = CircularBuffer()
+        write_lock = Lock()
+        futures = []
+        output_path = Path(output_path)
+
+        def download_worker(start: int, end: int) -> None:
+            """
+            Downloads a chunk of a file from the given URL.
+
+            - This method sends a GET request with a 'Range' header to the specified URL to obtain the specified chunk of the file.
+            - The chunk is then written to the buffer.
+
+            Args:
+                start: The start byte of the chunk. (required)
+                end: The end byte of the chunk. (required)
+
+            Raises:
+                DownloadError: If an error occurs while downloading the chunk.
+            """
+
+            headers = {**self._custom_headers}
+
+            if end > 0:
+                headers['Range'] = f'bytes={start}-{end}'
+            try:
+                with self._client.stream('GET', url, headers=headers) as r:
+                    r.raise_for_status()
+
+                    for data in r.iter_bytes(chunk_size=8192):
+                        while buffer.is_full():
+                            sleep(0.1)
+
+                        buffer.write(data)
+                        progress.update(task_id, advance=len(data))
+            except (HTTPStatusError, Exception) as e:
+                raise DownloadError(f'An error occurred while downloading chunk: {str(e)}') from e
+
+        def write_worker() -> None:
+            """
+            Writes the data from the buffer to the output file in a separate thread.
+            """
+
+            nonlocal futures
+
+            with output_path.open('wb') as fo:
+                while True:
+                    with write_lock:
+                        data = buffer.read()
+
+                        if not data and all(future.done() for future in futures):
+                            break
+
+                        if data:
+                            fo.write(data)
+                            fo.flush()
+
+                    sleep(0.01)
+
+        ranges = self._get_chunk_ranges(total_size)
+
+        with ThreadPoolExecutor(max_workers=len(ranges) + 1) as executor:
+            write_future = executor.submit(write_worker)
+            futures = [executor.submit(download_worker, start, end) for start, end in ranges]
+
+            for future in futures:
+                future.result()
+
+            write_future.result()
+
     def download(
         self,
         url: str,
@@ -310,14 +436,15 @@ class TurboDL:
             RequestError: If an error occurs while getting file info.
         """
 
-        output_path = Path(output_path)
+        output_path = Path(output_path).resolve()
 
         try:
             total_size, _, suggested_filename = self._get_file_info(url)
         except RequestError as e:
             raise DownloadError(f'An error occurred while getting file info: {str(e)}') from e
 
-        self._is_enough_space_to_download(output_path, total_size)
+        if not self._is_enough_space_to_download(output_path.parent, total_size):
+            raise InsufficientSpaceError(f'Not enough space to download {total_size} bytes to "{output_path.as_posix()}"')
 
         try:
             if output_path.is_dir():
@@ -346,20 +473,10 @@ class TurboDL:
             with Progress(*progress_columns, disable=not self._show_progress_bar) as progress:
                 task_id = progress.add_task('download', total=total_size or 100, filename=output_path.name)
 
-                with Path(output_path).open('wb') as fo:
-                    if total_size == 0:
-                        chunk = self._download_chunk(url, 0, 0, progress, task_id)
-                        fo.write(chunk)
-                    else:
-                        ranges = self._get_chunk_ranges(total_size)
-
-                        with ThreadPoolExecutor(max_workers=len(ranges)) as executor:
-                            futures = [
-                                executor.submit(self._download_chunk, url, start, end, progress, task_id) for start, end in ranges
-                            ]
-
-                            for future in futures:
-                                fo.write(future.result())
+                if total_size == 0:
+                    Path(output_path).write_bytes(self._download_chunk(url, 0, 0, progress, task_id))
+                else:
+                    self._download_with_buffer(url, output_path, progress, task_id, total_size)
         except KeyboardInterrupt:
             Path(output_path).unlink(missing_ok=True)
             self.output_path = None
