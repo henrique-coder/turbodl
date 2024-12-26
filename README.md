@@ -36,8 +36,7 @@ from turbodl import TurboDL
 turbodl = TurboDL(
     max_connections='auto',
     connection_speed=80,
-    show_optimization_progress_bar=True,
-    show_progress_bar=True,
+    show_progress_bars=True,
     custom_headers=None,
     timeout=None
 )
@@ -46,7 +45,9 @@ turbodl.download(
     url='https://example.com/file.txt',
     output_path='path/to/file',
     expected_hash='0a1b2c3d4e5f6g7h8i9j',  # Or None if you don't want to check the hash
-    hash_type='sha256'
+    hash_type='md5'
+    pre_allocate_space=False,
+    use_ram_buffer=True,
 )
 # >>> file.txt ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 35.6/35.6 kB 36.2 MB/s 0:00:00 100%
 
@@ -73,7 +74,7 @@ turbodl --help
 # >>> │ --help                                                           Show this message and exit.                                                                                                                                 │
 # >>> ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
 
-turbodl https://example.com/file.txt [...] path/to/file  # Tip: use -cs argument to set your connection speed and accelerate the download
+turbodl https://example.com/file.txt [...] path/to/file  # Tip: use -cs argument to set your connection speed in Mbps and accelerate the download
 # >>> file.txt ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 35.6/35.6 kB 36.2 MB/s 0:00:00 100%
 ```
 
