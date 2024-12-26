@@ -56,7 +56,7 @@ class ChunkBuffer:
             chunk_data = self.current_buffer.getvalue()
             self.current_buffer = BytesIO()
             self.current_size = 0
-            
+
             return chunk_data
 
         return None

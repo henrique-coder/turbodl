@@ -7,10 +7,10 @@ from .exceptions import DownloadError, HashVerificationError, InsufficientSpaceE
 
 
 __all__: List[str] = [
-    'TurboDL',
-    'DownloadError',
-    'HashVerificationError',
-    'InsufficientSpaceError',
-    'RequestError',
-    'TurboDLError',
+    "TurboDL",
+    "DownloadError",
+    "HashVerificationError",
+    "InsufficientSpaceError",
+    "RequestError",
+    "TurboDLError",
 ]

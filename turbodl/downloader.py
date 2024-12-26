@@ -29,7 +29,7 @@ class TurboDL:
 
     def __init__(
         self,
-        max_connections: Union[int, Literal['auto']] = 'auto',
+        max_connections: Union[int, Literal["auto"]] = "auto",
         connection_speed: float = 80,
         overwrite: bool = True,
         show_progress_bars: bool = True,
@@ -40,11 +40,11 @@ class TurboDL:
         Initialize the class with the required settings for downloading a file.
 
         Args:
-            max_connections: The maximum number of connections to use for downloading the file. (default: 'auto')
+            max_connections: The maximum number of connections to use for downloading the file. (default: "auto")
             connection_speed: Your connection speed in Mbps (megabits per second). (default: 80)
             overwrite: Overwrite the file if it already exists. Otherwise, a "_1", "_2", etc. suffix will be added. (default: True)
             show_progress_bars: Show or hide all progress bars. (default: True)
-            custom_headers: Custom headers to include in the request. If None, default headers will be used. Imutable headers are 'Accept-Encoding', 'Connection' and 'Range'. (default: None)
+            custom_headers: Custom headers to include in the request. If None, default headers will be used. Imutable headers are "Accept-Encoding", "Connection" and "Range". (default: None)
             timeout: Timeout in seconds for the download process. Or None for no timeout. (default: None)
 
         Raises:
@@ -52,40 +52,40 @@ class TurboDL:
         """
 
         with Progress(
-            SpinnerColumn(spinner_name='dots', style='bold cyan'),
-            TextColumn('[bold cyan]Initializing TurboDL...', justify='left'),
-            BarColumn(bar_width=40, style='cyan', complete_style='green'),
+            SpinnerColumn(spinner_name="dots", style="bold cyan"),
+            TextColumn("[bold cyan]Initializing TurboDL...", justify="left"),
+            BarColumn(bar_width=40, style="cyan", complete_style="green"),
             TimeRemainingColumn(),
-            TextColumn('[bold][progress.percentage]{task.percentage:>3.0f}%'),
+            TextColumn("[bold][progress.percentage]{task.percentage:>3.0f}%"),
             transient=True,
             disable=not show_progress_bars,
         ) as progress:
-            task = progress.add_task('', total=100)
+            task = progress.add_task("", total=100)
 
-            self._max_connections: Union[int, Literal['auto']] = max_connections
+            self._max_connections: Union[int, Literal["auto"]] = max_connections
             self._connection_speed: int = connection_speed
 
             if isinstance(self._max_connections, int):
                 if not 1 <= self._max_connections <= 32:
-                    raise ValueError('max_connections must be between 1 and 32')
+                    raise ValueError("max_connections must be between 1 and 32")
 
             if self._connection_speed <= 0:
-                raise ValueError('connection_speed must be positive')
+                raise ValueError("connection_speed must be positive")
 
             self._overwrite: bool = overwrite
             self._show_progress_bars: bool = show_progress_bars
             self._timeout: Optional[int] = timeout
 
             self._custom_headers: Dict[Any, Any] = {
-                'Accept': '*/*',
-                'Accept-Encoding': 'identity',
-                'Connection': 'keep-alive',
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+                "Accept": "*/*",
+                "Accept-Encoding": "identity",
+                "Connection": "keep-alive",
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
             }
 
             if custom_headers:
                 for key, value in custom_headers.items():
-                    if key.title() not in ['Accept-Encoding', 'Range', 'Connection']:
+                    if key.title() not in ["Accept-Encoding", "Range", "Connection"]:
                         self._custom_headers[key.title()] = value
 
             self._client: Client = Client(
@@ -122,7 +122,7 @@ class TurboDL:
         return True
 
     @lru_cache(maxsize=256)
-    def _calculate_connections(self, file_size: int, connection_speed: Union[float, Literal['auto']]) -> int:
+    def _calculate_connections(self, file_size: int, connection_speed: Union[float, Literal["auto"]]) -> int:
         """
         Calculates the optimal number of connections based on file size and connection speed.
 
@@ -149,11 +149,11 @@ class TurboDL:
             Estimated optimal number of connections, capped between 2 and 32.
         """
 
-        if self._max_connections != 'auto':
+        if self._max_connections != "auto":
             return self._max_connections
 
         file_size_mb = file_size / (1024 * 1024)
-        speed = 80.0 if connection_speed == 'auto' else float(connection_speed)
+        speed = 80.0 if connection_speed == "auto" else float(connection_speed)
 
         beta = 5.6
         base_size = 1.0
@@ -174,18 +174,18 @@ class TurboDL:
         """
 
         try:
-            with self._client.stream('HEAD', url, headers=self._custom_headers, timeout=self._timeout) as r:
+            with self._client.stream("HEAD", url, headers=self._custom_headers, timeout=self._timeout) as r:
                 r.raise_for_status()
 
                 headers = r.headers
-                content_length = int(headers.get('content-length', 0))
-                content_type = headers.get('content-type', 'application/octet-stream').split(';')[0].strip()
+                content_length = int(headers.get("content-length", 0))
+                content_type = headers.get("content-type", "application/octet-stream").split(";")[0].strip()
 
-                if content_disposition := headers.get('content-disposition'):
-                    if 'filename*=' in content_disposition:
-                        filename = content_disposition.split('filename*=')[-1].split("'")[-1]
-                    elif 'filename=' in content_disposition:
-                        filename = content_disposition.split('filename=')[-1].strip('"\'')
+                if content_disposition := headers.get("content-disposition"):
+                    if "filename*=" in content_disposition:
+                        filename = content_disposition.split("filename*=")[-1].split("'")[-1]
+                    elif "filename=" in content_disposition:
+                        filename = content_disposition.split("filename=")[-1].strip("\"'")
                     else:
                         filename = None
                 else:
@@ -193,7 +193,7 @@ class TurboDL:
 
                 if not filename:
                     filename = (
-                        Path(unquote(urlparse(url).path)).name or f'downloaded_file{guess_mimetype_extension(content_type) or ""}'
+                        Path(unquote(urlparse(url).path)).name or f"downloaded_file{guess_mimetype_extension(content_type) or ""}"
                     )
 
                 return (content_length, content_type, filename)
@@ -249,13 +249,13 @@ class TurboDL:
         headers = {**self._custom_headers}
 
         if end > 0:
-            headers['Range'] = f'bytes={start}-{end}'
+            headers["Range"] = f"bytes={start}-{end}"
 
         try:
-            with self._client.stream('GET', url, headers=headers) as r:
+            with self._client.stream("GET", url, headers=headers) as r:
                 r.raise_for_status()
 
-                chunk = b''
+                chunk = b""
 
                 for data in r.iter_bytes(chunk_size=8192):
                     chunk += data
@@ -263,7 +263,7 @@ class TurboDL:
 
                 return chunk
         except HTTPStatusError as e:
-            raise DownloadError(f'An error occurred while downloading chunk: {str(e)}') from e
+            raise DownloadError(f"An error occurred while downloading chunk: {str(e)}") from e
 
     def _download_with_buffer(
         self, url: str, output_path: Union[str, PathLike], total_size: int, progress: Progress, task_id: int
@@ -296,10 +296,10 @@ class TurboDL:
             headers = {**self._custom_headers}
 
             if end > 0:
-                headers['Range'] = f'bytes={start}-{end}'
+                headers["Range"] = f"bytes={start}-{end}"
 
             try:
-                with self._client.stream('GET', url, headers=headers) as r:
+                with self._client.stream("GET", url, headers=headers) as r:
                     r.raise_for_status()
 
                     for data in r.iter_bytes(chunk_size=1024 * 1024):
@@ -312,7 +312,7 @@ class TurboDL:
                     if remaining := chunk_buffers[chunk_id].current_buffer.getvalue():
                         write_to_file(remaining, start + write_positions[chunk_id])
             except Exception as e:
-                raise DownloadError(f'Download error: {str(e)}')
+                raise DownloadError(f"Download error: {str(e)}")
 
         def write_to_file(data: bytes, position: int) -> None:
             """
@@ -323,7 +323,7 @@ class TurboDL:
                 position: The position in the file to write the data.
             """
 
-            with Path(output_path).open('r+b') as f:
+            with Path(output_path).open("r+b") as f:
                 current_size = f.seek(0, 2)
 
                 if current_size < total_size:
@@ -362,19 +362,19 @@ class TurboDL:
         def download_worker(start: int, end: int) -> None:
             headers = {**self._custom_headers}
             if end > 0:
-                headers['Range'] = f'bytes={start}-{end}'
+                headers["Range"] = f"bytes={start}-{end}"
 
             try:
-                with self._client.stream('GET', url, headers=headers) as r:
+                with self._client.stream("GET", url, headers=headers) as r:
                     r.raise_for_status()
                     with write_lock:
-                        with open(output_path, 'r+b') as f:
+                        with open(output_path, "r+b") as f:
                             f.seek(start)
                             for data in r.iter_bytes(chunk_size=8192):
                                 f.write(data)
                                 progress.update(task_id, advance=len(data))
             except Exception as e:
-                raise DownloadError(f'Download error: {str(e)}')
+                raise DownloadError(f"Download error: {str(e)}")
 
         ranges = self._get_chunk_ranges(total_size)
         with ThreadPoolExecutor(max_workers=len(ranges)) as executor:
@@ -391,21 +391,21 @@ class TurboDL:
         use_ram_buffer: bool = True,
         expected_hash: Optional[str] = None,
         hash_type: Literal[
-            'md5',
-            'sha1',
-            'sha224',
-            'sha256',
-            'sha384',
-            'sha512',
-            'blake2b',
-            'blake2s',
-            'sha3_224',
-            'sha3_256',
-            'sha3_384',
-            'sha3_512',
-            'shake_128',
-            'shake_256',
-        ] = 'md5',
+            "md5",
+            "sha1",
+            "sha224",
+            "sha256",
+            "sha384",
+            "sha512",
+            "blake2b",
+            "blake2s",
+            "sha3_224",
+            "sha3_256",
+            "sha3_384",
+            "sha3_512",
+            "shake_128",
+            "shake_256",
+        ] = "md5",
     ) -> None:
         """
         Downloads a file from the provided URL to the output file path.
@@ -420,7 +420,7 @@ class TurboDL:
             pre_allocate_space: Whether to pre-allocate space for the file, useful to avoid disk fragmentation. (default: False)
             use_ram_buffer: Whether to use a RAM buffer to download the file. (default: True)
             expected_hash: The expected hash of the downloaded file. If provided, the hash will be verified after the download is complete. (default: None)
-            hash_type: The hash type to use for the hash verification. (default: 'md5')
+            hash_type: The hash type to use for the hash verification. (default: "md5")
 
         Raises:
             DownloadError: If an error occurs while downloading the file.
@@ -434,7 +434,7 @@ class TurboDL:
         try:
             total_size, _, suggested_filename = self._get_file_info(url)
         except RequestError as e:
-            raise DownloadError(f'An error occurred while getting file info: {str(e)}') from e
+            raise DownloadError(f"An error occurred while getting file info: {str(e)}") from e
 
         if not self._is_enough_space_to_download(output_path, total_size):
             raise InsufficientSpaceError(f'Not enough space to download {total_size} bytes to "{output_path.as_posix()}"')
@@ -449,11 +449,11 @@ class TurboDL:
                 counter = 1
 
                 while output_path.exists():
-                    output_path = Path(output_path.parent, f'{base_name}_{counter}{extension}')
+                    output_path = Path(output_path.parent, f"{base_name}_{counter}{extension}")
                     counter += 1
 
             if pre_allocate_space and total_size > 0:
-                with output_path.open('wb') as f:
+                with output_path.open("wb") as f:
                     f.truncate(total_size)
             else:
                 output_path.touch(exist_ok=True)
@@ -461,16 +461,16 @@ class TurboDL:
             self.output_path = output_path.as_posix()
 
             progress_columns = [
-                TextColumn(output_path.name, style='magenta'),
-                BarColumn(style='bold white', complete_style='bold red', finished_style='bold green'),
+                TextColumn(output_path.name, style="magenta"),
+                BarColumn(style="bold white", complete_style="bold red", finished_style="bold green"),
                 DownloadColumn(),
                 TransferSpeedColumn(),
                 TimeRemainingColumn(),
-                TextColumn('[bold][progress.percentage]{task.percentage:>3.0f}%'),
+                TextColumn("[bold][progress.percentage]{task.percentage:>3.0f}%"),
             ]
 
             with Progress(*progress_columns, disable=not self._show_progress_bars) as progress:
-                task_id = progress.add_task('download', total=total_size or 100, filename=output_path.name)
+                task_id = progress.add_task("download", total=total_size or 100, filename=output_path.name)
 
                 if total_size == 0:
                     Path(output_path).write_bytes(self._download_chunk(url, 0, 0, progress, task_id))
@@ -484,13 +484,13 @@ class TurboDL:
             self.output_path = None
             return None
         except Exception as e:
-            raise DownloadError(f'An error occurred while downloading file: {str(e)}') from e
+            raise DownloadError(f"An error occurred while downloading file: {str(e)}") from e
 
         if expected_hash is not None:
             hasher = hashlib_new(hash_type)
 
-            with Path(output_path).open('rb') as f:
-                for chunk in iter(lambda: f.read(8192), b''):
+            with Path(output_path).open("rb") as f:
+                for chunk in iter(lambda: f.read(8192), b""):
                     hasher.update(chunk)
 
             file_hash = hasher.hexdigest()
