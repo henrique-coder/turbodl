@@ -47,6 +47,22 @@ jobs:
           echo "$COMMITS" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
+      - name: 🐍 Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          check-latest: true
+
+      - name: 🔧 Install Build Tools
+        run: python -m pip install --upgrade pip build twine
+
+      - name: 🏗️ Build Package
+        run: python -m build --sdist --wheel
+
+      - name: ✅ Validate Metadata
+        run: twine check dist/*
+
       - name: 🚀 Create Release
         uses: softprops/action-gh-release@v2
         with:
@@ -66,24 +82,11 @@ jobs:
             [View all changes](https://github.com/henrique-coder/turbodl/compare/${{ steps.previoustag.outputs.tag }}...v${{ steps.version.outputs.version }})
           draft: false
           prerelease: false
+          files: |
+            dist/*.whl
+            dist/*.tar.gz
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: 🐍 Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.13"
-          cache: pip
-          check-latest: true
-
-      - name: 🔧 Install Build Tools
-        run: python -m pip install --upgrade pip build twine
-
-      - name: 🏗️ Build Package
-        run: python -m build --sdist --wheel
-
-      - name: ✅ Validate Metadata
-        run: twine check dist/*
 
       - name: 🚀 Upload to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
