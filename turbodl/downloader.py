@@ -303,7 +303,7 @@ class TurboDL:
                     r.raise_for_status()
 
                     for data in r.iter_bytes(chunk_size=1024 * 1024):
-                        if complete_chunk := chunk_buffers[chunk_id].write(data):
+                        if complete_chunk := chunk_buffers[chunk_id].write(data, total_size):
                             write_to_file(complete_chunk, start + write_positions[chunk_id])
                             write_positions[chunk_id] += len(complete_chunk)
 
