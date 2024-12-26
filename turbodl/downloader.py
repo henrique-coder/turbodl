@@ -93,7 +93,7 @@ class TurboDL:
                 follow_redirects=True,
                 verify=True,
                 http2=True,
-                limits=Limits(max_keepalive_connections=32, max_connections=64, keepalive_expiry=30.0),
+                limits=Limits(max_keepalive_connections=32, max_connections=64),
                 timeout=self._timeout,
             )
 
