@@ -14,6 +14,7 @@ TurboDL ia an extremely smart, fast and efficient download manager with several 
 - Automatically detects file information before download.
 - Automatically handles redirects.
 - Supports post-download hash verification.
+- Automatically uses RAM buffer to speed up downloads and reduce disk I/O.
 - Accurately displays a beautiful progress bar.
 
 <br>
