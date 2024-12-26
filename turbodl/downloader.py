@@ -421,16 +421,19 @@ class TurboDL:
             try:
                 with self._client.stream("GET", url, headers=headers) as r:
                     r.raise_for_status()
+
                     with write_lock:
-                        with open(output_path, "r+b") as f:
-                            f.seek(start)
+                        with Path(output_path).open("r+b") as fo:
+                            fo.seek(start)
+
                             for data in r.iter_bytes(chunk_size=8192):
-                                f.write(data)
+                                fo.write(data)
                                 progress.update(task_id, advance=len(data))
             except Exception as e:
-                raise DownloadError(f"Download error: {str(e)}")
+                raise DownloadError(f"An error occurred while downloading chunk: {str(e)}") from e
 
         ranges = self._get_chunk_ranges(total_size)
+
         with ThreadPoolExecutor(max_workers=len(ranges)) as executor:
             futures = [executor.submit(download_worker, start, end) for start, end in ranges]
 
@@ -507,8 +510,8 @@ class TurboDL:
                     counter += 1
 
             if pre_allocate_space and total_size > 0:
-                with output_path.open("wb") as f:
-                    f.truncate(total_size)
+                with output_path.open("wb") as fo:
+                    fo.truncate(total_size)
             else:
                 output_path.touch(exist_ok=True)
 
