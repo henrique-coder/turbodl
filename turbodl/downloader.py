@@ -7,14 +7,13 @@ from mimetypes import guess_extension as guess_mimetype_extension
 from mmap import mmap
 from os import PathLike, ftruncate
 from pathlib import Path
-from shutil import disk_usage
 from threading import Lock
 from typing import Any, Dict, List, Literal, Optional, Tuple, Union
 from urllib.parse import unquote, urlparse
 
 # Third-party imports
 from httpx import Client, HTTPStatusError, Limits
-from psutil import virtual_memory
+from psutil import disk_usage, virtual_memory
 from rich.progress import BarColumn, DownloadColumn, Progress, SpinnerColumn, TextColumn, TimeRemainingColumn, TransferSpeedColumn
 from tenacity import retry, stop_after_attempt, wait_exponential
 
@@ -169,10 +168,12 @@ class TurboDL:
             True if there is enough space, False otherwise.
         """
 
-        required_space = size + (1 * 1024 * 1024 * 1024)
-        _, _, free = disk_usage(Path(path).as_posix())
+        path = Path(path)
 
-        if free < required_space:
+        required_space = size + (1 * 1024 * 1024 * 1024)
+        disk_usage_obj = disk_usage(path.parent.as_posix() if path.is_file() or not path.exists() else path.as_posix())
+
+        if disk_usage_obj.free < required_space:
             return False
 
         return True
@@ -188,7 +189,7 @@ class TurboDL:
         - Network overhead management
 
         Formula:
-        \[ connections = 2 \cdot \left\lceil\frac{\beta \cdot \log_2(1 + \frac{S}{M}) \cdot \sqrt{\frac{V}{100}}}{2}\right\rceil \]
+        conn = β * log2(1 + S / M) * sqrt(V / 100)
 
         Where:
         - S: File size in MB
