@@ -1,6 +1,5 @@
 # Built-in imports
 from concurrent.futures import ThreadPoolExecutor
-from functools import lru_cache
 from hashlib import new as hashlib_new
 from io import BytesIO
 from math import ceil, log2, sqrt
@@ -178,7 +177,6 @@ class TurboDL:
 
         return True
 
-    @lru_cache(maxsize=256)
     def _calculate_connections(self, file_size: int, connection_speed: Union[float, Literal["auto"]]) -> int:
         """
         Calculates the optimal number of connections based on file size and connection speed.
@@ -257,7 +255,6 @@ class TurboDL:
         except HTTPStatusError as e:
             raise RequestError(f'Request failed with status code "{e.response.status_code}"') from e
 
-    @lru_cache(maxsize=256)
     def _get_chunk_ranges(self, total_size: int) -> List[Tuple[int, int]]:
         """
         Calculate the optimal chunk ranges for downloading a file.
