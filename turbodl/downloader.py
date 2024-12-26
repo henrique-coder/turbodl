@@ -32,8 +32,7 @@ class TurboDL:
         max_connections: Union[int, Literal['auto']] = 'auto',
         connection_speed: float = 80,
         overwrite: bool = True,
-        show_optimization_progress_bar: bool = True,
-        show_progress_bar: bool = True,
+        show_progress_bars: bool = True,
         custom_headers: Optional[Dict[Any, Any]] = None,
         timeout: Optional[int] = None,
     ) -> None:
@@ -44,8 +43,7 @@ class TurboDL:
             max_connections: The maximum number of connections to use for downloading the file. (default: 'auto')
             connection_speed: Your connection speed in Mbps (megabits per second). (default: 80)
             overwrite: Overwrite the file if it already exists. Otherwise, a "_1", "_2", etc. suffix will be added. (default: True)
-            show_optimization_progress_bar: Show or hide the initial optimization progress bar. (default: True)
-            show_progress_bar: Show or hide the download progress bar. (default: True)
+            show_progress_bars: Show or hide all progress bars. (default: True)
             custom_headers: Custom headers to include in the request. If None, default headers will be used. Imutable headers are 'Accept-Encoding', 'Connection' and 'Range'. (default: None)
             timeout: Timeout in seconds for the download process. Or None for no timeout. (default: None)
 
@@ -55,12 +53,12 @@ class TurboDL:
 
         with Progress(
             SpinnerColumn(spinner_name='dots', style='bold cyan'),
-            TextColumn('[bold cyan]Generating the best settings...', justify='left'),
+            TextColumn('[bold cyan]Initializing TurboDL...', justify='left'),
             BarColumn(bar_width=40, style='cyan', complete_style='green'),
             TimeRemainingColumn(),
             TextColumn('[bold][progress.percentage]{task.percentage:>3.0f}%'),
             transient=True,
-            disable=not show_optimization_progress_bar,
+            disable=not show_progress_bars,
         ) as progress:
             task = progress.add_task('', total=100)
 
@@ -75,7 +73,7 @@ class TurboDL:
                 raise ValueError('connection_speed must be positive')
 
             self._overwrite: bool = overwrite
-            self._show_progress_bar: bool = show_progress_bar
+            self._show_progress_bars: bool = show_progress_bars
             self._timeout: Optional[int] = timeout
 
             self._custom_headers: Dict[Any, Any] = {
@@ -165,6 +163,16 @@ class TurboDL:
 
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=5), reraise=True)
     def _get_file_info(self, url: str) -> Tuple[int, str, str]:
+        """
+        Get information about the file to be downloaded.
+
+        Args:
+            url: The URL of the file to be downloaded.
+
+        Returns:
+            A tuple containing the file size in bytes, content type, and filename.
+        """
+
         try:
             with self._client.stream('HEAD', url, headers=self._custom_headers, timeout=self._timeout) as r:
                 r.raise_for_status()
@@ -194,6 +202,16 @@ class TurboDL:
 
     @lru_cache(maxsize=256)
     def _get_chunk_ranges(self, total_size: int) -> List[Tuple[int, int]]:
+        """
+        Calculate the optimal chunk ranges for downloading a file.
+
+        Args:
+            total_size: The total size of the file in bytes.
+
+        Returns:
+            A list of tuples containing the start and end indices of each chunk.
+        """
+
         if total_size == 0:
             return [(0, 0)]
 
@@ -214,6 +232,20 @@ class TurboDL:
 
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10), reraise=True)
     def _download_chunk(self, url: str, start: int, end: int, progress: Progress, task_id: int) -> bytes:
+        """
+        Download a chunk of a file from the provided URL.
+
+        Args:
+            url: The URL of the file to be downloaded.
+            start: The start index of the chunk.
+            end: The end index of the chunk.
+            progress: The progress bar to update.
+            task_id: The task ID of the progress bar.
+
+        Returns:
+            The downloaded chunk as bytes.
+        """
+
         headers = {**self._custom_headers}
 
         if end > 0:
@@ -236,13 +268,30 @@ class TurboDL:
     def _download_with_buffer(
         self, url: str, output_path: Union[str, PathLike], total_size: int, progress: Progress, task_id: int
     ) -> None:
+        """
+        Download a file from the provided URL to the output file path using a buffer.
+
+        Args:
+            url: The URL of the file to be downloaded.
+            output_path: The path to save the downloaded file to.
+            total_size: The total size of the file in bytes.
+            progress: The progress bar to update.
+            task_id: The task ID of the progress bar.
+        """
+
         chunk_buffers = {}
         write_positions = {}
 
-        Path(output_path).parent.mkdir(parents=True, exist_ok=True)
-        Path(output_path).touch()
-
         def download_worker(start: int, end: int, chunk_id: int) -> None:
+            """
+            Download a chunk of a file from the provided URL.
+
+            Args:
+                start: The start index of the chunk.
+                end: The end index of the chunk.
+                chunk_id: The ID of the chunk.
+            """
+
             chunk_buffers[chunk_id] = ChunkBuffer()
             headers = {**self._custom_headers}
 
@@ -266,6 +315,14 @@ class TurboDL:
                 raise DownloadError(f'Download error: {str(e)}')
 
         def write_to_file(data: bytes, position: int) -> None:
+            """
+            Write data to the output file at the specified position.
+
+            Args:
+                data: The data to write to the file.
+                position: The position in the file to write the data.
+            """
+
             with Path(output_path).open('r+b') as f:
                 current_size = f.seek(0, 2)
 
@@ -282,14 +339,23 @@ class TurboDL:
             write_positions[i] = 0
 
         with ThreadPoolExecutor(max_workers=len(ranges)) as executor:
-            futures = [executor.submit(download_worker, start, end, i) for i, (start, end) in enumerate(ranges)]
-
-            for future in futures:
+            for future in [executor.submit(download_worker, start, end, i) for i, (start, end) in enumerate(ranges)]:
                 future.result()
 
     def _download_direct(
         self, url: str, output_path: Union[str, PathLike], total_size: int, progress: Progress, task_id: int
     ) -> None:
+        """
+        Download a file from the provided URL directly to the output file path.
+
+        Args:
+            url: The URL of the file to be downloaded.
+            output_path: The path to save the downloaded file to.
+            total_size: The total size of the file in bytes.
+            progress: The progress bar to update.
+            task_id: The task ID of the progress bar.
+        """
+
         write_lock = Lock()
         futures = []
 
@@ -389,6 +455,8 @@ class TurboDL:
             if pre_allocate_space and total_size > 0:
                 with output_path.open('wb') as f:
                     f.truncate(total_size)
+            else:
+                output_path.touch(exist_ok=True)
 
             self.output_path = output_path.as_posix()
 
@@ -401,7 +469,7 @@ class TurboDL:
                 TextColumn('[bold][progress.percentage]{task.percentage:>3.0f}%'),
             ]
 
-            with Progress(*progress_columns, disable=not self._show_progress_bar) as progress:
+            with Progress(*progress_columns, disable=not self._show_progress_bars) as progress:
                 task_id = progress.add_task('download', total=total_size or 100, filename=output_path.name)
 
                 if total_size == 0:

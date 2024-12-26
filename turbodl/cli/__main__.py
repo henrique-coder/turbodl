@@ -34,14 +34,8 @@ def main(
         '-o/-no',
         help='Overwrite the file if it already exists. Otherwise, a "_1", "_2", etc. suffix will be added.',
     ),
-    show_optimization_progress_bar: bool = Option(
-        True,
-        '--show-optimization-progress-bar/--hide-optimization-progress-bar',
-        '-sop/-hop',
-        help='Show or hide the initial optimization progress bar.',
-    ),
-    show_progress: bool = Option(
-        True, '--show-progress/--hide-progress', '-sp/-hp', help='Show or hide the download progress bar.'
+    show_progress_bars: bool = Option(
+        True, '--show-progress-bars/--hide-progress-bars', '-spb/-hpb', help='Show or hide all progress bars.'
     ),
     timeout: int = Option(None, '--timeout', '-t', help='Timeout in seconds for the download process. Or None for no timeout.'),
 ) -> None:
@@ -50,8 +44,7 @@ def main(
             max_connections='auto' if max_connections is None else max_connections,
             connection_speed=80 if connection_speed is None else connection_speed,
             overwrite=True if overwrite is None else overwrite,
-            show_optimization_progress_bar=True if show_optimization_progress_bar is None else show_optimization_progress_bar,
-            show_progress_bar=True if show_progress is None else show_progress,
+            show_progress_bars=True if show_progress_bars is None else show_progress_bars,
             timeout=timeout,
         )
 
