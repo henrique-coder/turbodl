@@ -102,54 +102,41 @@ class TurboDL:
             ValueError: If max_connections is not between 1 and 32 or connection_speed is not positive.
         """
 
-        with Progress(
-            SpinnerColumn(spinner_name="dots", style="bold cyan"),
-            TextColumn("[bold cyan]Initializing TurboDL...", justify="left"),
-            BarColumn(bar_width=40, style="cyan", complete_style="green"),
-            TimeRemainingColumn(),
-            TextColumn("[bold][progress.percentage]{task.percentage:>3.0f}%"),
-            transient=True,
-            disable=not show_progress_bars,
-        ) as progress:
-            task = progress.add_task("", total=100)
+        self._max_connections: Union[int, Literal["auto"]] = max_connections
+        self._connection_speed: int = connection_speed
 
-            self._max_connections: Union[int, Literal["auto"]] = max_connections
-            self._connection_speed: int = connection_speed
+        if isinstance(self._max_connections, int):
+            if not 1 <= self._max_connections <= 32:
+                raise ValueError("max_connections must be between 1 and 32")
 
-            if isinstance(self._max_connections, int):
-                if not 1 <= self._max_connections <= 32:
-                    raise ValueError("max_connections must be between 1 and 32")
+        if self._connection_speed <= 0:
+            raise ValueError("connection_speed must be positive")
 
-            if self._connection_speed <= 0:
-                raise ValueError("connection_speed must be positive")
+        self._overwrite: bool = overwrite
+        self._show_progress_bars: bool = show_progress_bars
+        self._timeout: Optional[int] = timeout
 
-            self._overwrite: bool = overwrite
-            self._show_progress_bars: bool = show_progress_bars
-            self._timeout: Optional[int] = timeout
+        self._custom_headers: Dict[Any, Any] = {
+            "Accept": "*/*",
+            "Accept-Encoding": "identity",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+        }
 
-            self._custom_headers: Dict[Any, Any] = {
-                "Accept": "*/*",
-                "Accept-Encoding": "identity",
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
-            }
+        if custom_headers:
+            for key, value in custom_headers.items():
+                if key.title() not in ["Accept-Encoding", "Range", "Connection"]:
+                    self._custom_headers[key.title()] = value
 
-            if custom_headers:
-                for key, value in custom_headers.items():
-                    if key.title() not in ["Accept-Encoding", "Range", "Connection"]:
-                        self._custom_headers[key.title()] = value
+        self._client: Client = Client(
+            headers=self._custom_headers,
+            follow_redirects=True,
+            verify=True,
+            http2=True,
+            limits=Limits(max_keepalive_connections=32, max_connections=64),
+            timeout=self._timeout,
+        )
 
-            self._client: Client = Client(
-                headers=self._custom_headers,
-                follow_redirects=True,
-                verify=True,
-                http2=True,
-                limits=Limits(max_keepalive_connections=32, max_connections=64),
-                timeout=self._timeout,
-            )
-
-            self.output_path: str = None
-
-            progress.update(task, advance=100)
+        self.output_path: str = None
 
     def _is_enough_space_to_download(self, path: Union[str, PathLike], size: int) -> bool:
         """
