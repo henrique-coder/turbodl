@@ -459,7 +459,7 @@ class TurboDL:
             output_path: The path to save the downloaded file to. If the path is a directory, the file name will be generated from the server response. If the path is a file, the file will be saved with the provided name. If not provided, the file will be saved to the current working directory. (default: Path.cwd())
             pre_allocate_space: Whether to pre-allocate space for the file, useful to avoid disk fragmentation. (default: False)
             use_ram_buffer: Whether to use a RAM buffer to download the file. (default: True)
-            expected_hash: The expected hash of the downloaded file. If provided, the hash will be verified after the download is complete. (default: None)
+            expected_hash: The expected hash of the downloaded file. If not provided, the hash will not be checked. (default: None)
             hash_type: The hash type to use for the hash verification. (default: "md5")
 
         Raises:

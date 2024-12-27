@@ -7,7 +7,6 @@ from rich.console import Console
 
 # Local imports
 from turbodl.downloader import TurboDL
-from turbodl.exceptions import DownloadError, RequestError, TurboDLError
 
 
 app = Typer()
@@ -38,6 +37,25 @@ def main(
         True, "--show-progress-bars/--hide-progress-bars", "-spb/-hpb", help="Show or hide all progress bars."
     ),
     timeout: int = Option(None, "--timeout", "-t", help="Timeout in seconds for the download process. Or None for no timeout."),
+    expected_hash: str = Option(
+        None,
+        "--expected-hash",
+        "-eh",
+        help="The expected hash of the downloaded file. If not provided, the hash will not be checked.",
+    ),
+    hash_type: str = Option(
+        "md5",
+        "--hash-type",
+        "-ht",
+        help="The hash type to use for the hash verification. Must be one of 'md5', 'sha1', 'sha224', 'sha256', 'sha384', 'sha512', 'blake2b', 'blake2s', 'sha3_224', 'sha3_256', 'sha3_384', 'sha3_512', 'shake_128' or 'shake_256'.",
+    ),
+    pre_allocate_space: bool = Option(
+        False,
+        "--pre-allocate-space",
+        "-pas",
+        help="Whether to pre-allocate space for the file, useful to avoid disk fragmentation.",
+    ),
+    use_ram_buffer: bool = Option(True, "--use-ram-buffer", "-urb", help="Whether to use a RAM buffer to download the file."),
 ) -> None:
     try:
         turbodl = TurboDL(
@@ -51,9 +69,16 @@ def main(
         if not output_path:
             output_path = Path(Path.cwd(), Path(url).name)
 
-        turbodl.download(url=url, output_path=output_path)
+        turbodl.download(
+            url=url,
+            output_path=output_path,
+            expected_hash=expected_hash,
+            hash_type=hash_type,
+            pre_allocate_space=pre_allocate_space,
+            use_ram_buffer=use_ram_buffer,
+        )
 
-    except (DownloadError, RequestError, TurboDLError) as e:
+    except Exception as e:
         console.print(f"[red]Error: {str(e)}")
         raise Exit(1)
 

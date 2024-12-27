@@ -59,6 +59,8 @@ turbodl.download(
 
 ```bash
 turbodl --help
+# >>>  Usage: turbodl [OPTIONS] URL [OUTPUT_PATH]
+# >>>
 # >>> ╭─ Arguments ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
 # >>> │ *    url              TEXT           The download URL to download the file from. [default: None] [required]                                                                                                                  │
 # >>> │      output_path      [OUTPUT_PATH]  The path to save the downloaded file to. If the path is a directory, the file name will be generated from the server response. If the path is a file, the file will be saved with the   │
@@ -71,6 +73,12 @@ turbodl --help
 # >>> │ --overwrite           -o    --no-overwrite        -no            Overwrite the file if it already exists. Otherwise, a "_1", "_2", etc. suffix will be added. [default: overwrite]                                           │
 # >>> │ --show-progress-bars  -spb  --hide-progress-bars  -hpb           Show or hide all progress bars. [default: show-progress-bars]                                                                                               │
 # >>> │ --timeout             -t                                INTEGER  Timeout in seconds for the download process. Or None for no timeout. [default: None]                                                                        │
+# >>> │ --expected-hash       -eh                               TEXT     The expected hash of the downloaded file. If not provided, the hash will not be checked. [default: None]                                                    │
+# >>> │ --hash-type           -ht                               TEXT     The hash type to use for the hash verification. Must be one of 'md5', 'sha1', 'sha224', 'sha256', 'sha384', 'sha512', 'blake2b', 'blake2s', 'sha3_224',     │
+# >>> │                                                                  'sha3_256', 'sha3_384', 'sha3_512', 'shake_128' or 'shake_256'.                                                                                             │
+# >>> │                                                                  [default: md5]                                                                                                                                              │
+# >>> │ --pre-allocate-space  -pas                                       Whether to pre-allocate space for the file, useful to avoid disk fragmentation.                                                                             │
+# >>> │ --use-ram-buffer      -urb                                       Whether to use a RAM buffer to download the file. [default: True]                                                                                           │
 # >>> │ --help                                                           Show this message and exit.                                                                                                                                 │
 # >>> ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
 
