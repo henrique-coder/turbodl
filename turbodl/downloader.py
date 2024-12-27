@@ -26,7 +26,7 @@ class ChunkBuffer:
     A class for buffering chunks of data.
     """
 
-    def __init__(self, chunk_size_mb: int = 128, max_buffer_mb: int = 1024) -> None:
+    def __init__(self, chunk_size_mb: int = 256, max_buffer_mb: int = 1024) -> None:
         """
         Initialize the ChunkBuffer class.
 
@@ -57,8 +57,14 @@ class ChunkBuffer:
         self.current_size += len(data)
         self.total_buffered += len(data)
 
-        if self.current_size >= self.chunk_size or self.total_buffered >= total_file_size:
+        if (
+            self.current_size >= self.chunk_size
+            or self.total_buffered >= total_file_size
+            or self.current_size >= self.max_buffer_size
+        ):
             chunk_data = self.current_buffer.getvalue()
+
+            self.current_buffer.close()
             self.current_buffer = BytesIO()
             self.current_size = 0
 
@@ -206,6 +212,35 @@ class TurboDL:
 
         return max(2, min(24, ceil(conn_float)))
 
+    def _get_chunk_ranges(self, total_size: int) -> List[Tuple[int, int]]:
+        """
+        Calculate the optimal chunk ranges for downloading a file.
+
+        Args:
+            total_size: The total size of the file in bytes.
+
+        Returns:
+            A list of tuples containing the start and end indices of each chunk.
+        """
+
+        if total_size == 0:
+            return [(0, 0)]
+
+        connections = self._calculate_connections(total_size, self._connection_speed)
+        chunk_size = ceil(total_size / connections)
+
+        ranges = []
+        start = 0
+
+        while total_size > 0:
+            current_chunk = min(chunk_size, total_size)
+            end = start + current_chunk - 1
+            ranges.append((start, end))
+            start = end + 1
+            total_size -= current_chunk
+
+        return ranges
+
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=5), reraise=True)
     def _get_file_info(self, url: str) -> Tuple[int, str, str]:
         """
@@ -244,35 +279,6 @@ class TurboDL:
                 return (content_length, content_type, filename)
         except HTTPStatusError as e:
             raise RequestError(f'Request failed with status code "{e.response.status_code}"') from e
-
-    def _get_chunk_ranges(self, total_size: int) -> List[Tuple[int, int]]:
-        """
-        Calculate the optimal chunk ranges for downloading a file.
-
-        Args:
-            total_size: The total size of the file in bytes.
-
-        Returns:
-            A list of tuples containing the start and end indices of each chunk.
-        """
-
-        if total_size == 0:
-            return [(0, 0)]
-
-        connections = self._calculate_connections(total_size, self._connection_speed)
-        chunk_size = ceil(total_size / connections)
-
-        ranges = []
-        start = 0
-
-        while total_size > 0:
-            current_chunk = min(chunk_size, total_size)
-            end = start + current_chunk - 1
-            ranges.append((start, end))
-            start = end + 1
-            total_size -= current_chunk
-
-        return ranges
 
     @retry(stop=stop_after_attempt(5), wait=wait_exponential(multiplier=2, min=1, max=10), reraise=True)
     def _download_chunk(self, url: str, start: int, end: int, progress: Progress, task_id: int) -> bytes:
