@@ -4,7 +4,7 @@ from hashlib import new as hashlib_new
 from io import BytesIO
 from math import ceil, log2, sqrt
 from mimetypes import guess_extension as guess_mimetype_extension
-from mmap import mmap
+from mmap import mmap, ACCESS_WRITE
 from os import PathLike, ftruncate
 from pathlib import Path
 from threading import Lock
@@ -26,7 +26,7 @@ class ChunkBuffer:
     A class for buffering chunks of data.
     """
 
-    def __init__(self, chunk_size_mb: int = 128, max_buffer_mb: int = 2048) -> None:
+    def __init__(self, chunk_size_mb: int = 128, max_buffer_mb: int = 1024) -> None:
         """
         Initialize the ChunkBuffer class.
 
@@ -36,7 +36,7 @@ class ChunkBuffer:
         """
 
         self.chunk_size = chunk_size_mb * 1024 * 1024
-        self.max_buffer_size = min(max_buffer_mb * 1024 * 1024, virtual_memory().available * 0.25)
+        self.max_buffer_size = min(max_buffer_mb * 1024 * 1024, virtual_memory().available * 0.30)
         self.current_buffer = BytesIO()
         self.current_size = 0
         self.total_buffered = 0
@@ -57,15 +57,12 @@ class ChunkBuffer:
         self.current_size += len(data)
         self.total_buffered += len(data)
 
-        if total_file_size <= self.max_buffer_size:
-            if self.total_buffered >= total_file_size:
-                chunk_data = self.current_buffer.getvalue()
-                self.current_buffer = BytesIO()
-                self.current_size = 0
+        if self.current_size >= self.chunk_size or self.total_buffered >= total_file_size:
+            chunk_data = self.current_buffer.getvalue()
+            self.current_buffer = BytesIO()
+            self.current_size = 0
 
-                return chunk_data
-
-            return None
+            return chunk_data
 
         if self.current_size >= self.chunk_size:
             chunk_data = self.current_buffer.getvalue()
@@ -201,7 +198,7 @@ class TurboDL:
             connection_speed: Your connection speed in Mbps.
 
         Returns:
-            Estimated optimal number of connections, capped between 2 and 32.
+            Estimated optimal number of connections, capped between 2 and 24.
         """
 
         if self._max_connections != "auto":
@@ -214,7 +211,7 @@ class TurboDL:
         base_size = 1.0
         conn_float = beta * log2(1 + file_size_mb / base_size) * sqrt(speed / 100)
 
-        return max(2, min(32, 2 * ceil(conn_float / 2)))
+        return max(2, min(24, ceil(conn_float)))
 
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=5), reraise=True)
     def _get_file_info(self, url: str) -> Tuple[int, str, str]:
@@ -284,7 +281,7 @@ class TurboDL:
 
         return ranges
 
-    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10), reraise=True)
+    @retry(stop=stop_after_attempt(5), wait=wait_exponential(multiplier=2, min=1, max=10), reraise=True)
     def _download_chunk(self, url: str, start: int, end: int, progress: Progress, task_id: int) -> bytes:
         """
         Download a chunk of a file from the provided URL.
@@ -383,7 +380,7 @@ class TurboDL:
                 if current_size < total_size:
                     ftruncate(f.fileno(), total_size)
 
-                with mmap(f.fileno(), 0) as mm:
+                with mmap(f.fileno(), length=total_size, access=ACCESS_WRITE) as mm:
                     mm[position : position + len(data)] = data
                     mm.flush()
 
@@ -510,8 +507,17 @@ class TurboDL:
                     counter += 1
 
             if pre_allocate_space and total_size > 0:
-                with output_path.open("wb") as fo:
-                    fo.truncate(total_size)
+                with Progress(
+                    SpinnerColumn(spinner_name="dots", style="bold cyan"),
+                    TextColumn(f"[bold cyan]Pre-allocating space for {total_size} bytes...", justify="left"),
+                    transient=True,
+                    disable=not self._show_progress_bars,
+                ) as progress:
+                    progress.add_task("", total=None)
+
+                    if pre_allocate_space and total_size > 0:
+                        with output_path.open("wb") as fo:
+                            fo.truncate(total_size)
             else:
                 output_path.touch(exist_ok=True)
 
