@@ -66,12 +66,9 @@ def main(
             timeout=timeout,
         )
 
-        if not output_path:
-            output_path = Path(Path.cwd(), Path(url).name)
-
         turbodl.download(
             url=url,
-            output_path=output_path,
+            output_path=output_path if output_path is not None else Path.cwd(),
             expected_hash=expected_hash,
             hash_type=hash_type,
             pre_allocate_space=pre_allocate_space,
