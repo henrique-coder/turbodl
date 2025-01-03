@@ -4,7 +4,7 @@ from hashlib import new as hashlib_new
 from io import BytesIO
 from math import ceil, log2, sqrt
 from mimetypes import guess_extension as guess_mimetype_extension
-from mmap import mmap, ACCESS_WRITE
+from mmap import ACCESS_WRITE, mmap
 from os import PathLike, ftruncate
 from pathlib import Path
 from threading import Lock
