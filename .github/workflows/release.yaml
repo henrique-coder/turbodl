@@ -25,12 +25,18 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: 📝 Extract Version
-        id: version
+      - name: 📝 Extract Version and Text
+        id: version_info
         run: |
-          VERSION=$(echo "${{ github.event.head_commit.message }}" | grep -oP 'Bump version to \K[^ ]+')
+          COMMIT_MSG="${{ github.event.head_commit.message }}"
+          VERSION=$(echo "$COMMIT_MSG" | grep -oP 'Bump version to \K[^ )]+')
+          EXTRA_TEXT=$(echo "$COMMIT_MSG" | grep -oP '\(.*\)' | sed 's/[()]//g' || echo "")
+
           echo "Version detected: $VERSION"
+          echo "Extra text: $EXTRA_TEXT"
+
           echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "extra_text=$EXTRA_TEXT" >> $GITHUB_OUTPUT
 
       - name: 🏷️ Get Previous Tag
         id: previoustag
@@ -71,8 +77,8 @@ jobs:
       - name: 🚀 Create Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ steps.version.outputs.version }}
-          name: "🎉 TurboDL ${{ steps.version.outputs.version }} - Summary"
+          tag_name: v${{ steps.version_info.outputs.version }}
+          name: ${{ steps.version_info.outputs.extra_text != '' && format('🎉 TurboDL {0} - {1}', steps.version_info.outputs.version, steps.version_info.outputs.extra_text) || format('🎉 TurboDL {0}', steps.version_info.outputs.version) }}
           body: |
             ## 📦 Installation Options
 
@@ -84,7 +90,7 @@ jobs:
 
             ### 📊 Compare Changes
 
-            [View all changes](https://github.com/henrique-coder/turbodl/compare/${{ steps.previoustag.outputs.tag }}...v${{ steps.version.outputs.version }})
+            [View all changes](https://github.com/henrique-coder/turbodl/compare/${{ steps.previoustag.outputs.tag }}...v${{ steps.version_info.outputs.version }})
           draft: false
           prerelease: false
           files: |
