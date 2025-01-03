@@ -507,10 +507,10 @@ class TurboDL:
             else:
                 output_path.touch(exist_ok=True)
 
-            self.output_path = output_path.as_posix()
+            self.output_path = output_path.resolve().as_posix()
 
             progress_columns = [
-                TextColumn(output_path.name, style="magenta"),
+                TextColumn(f'Downloading "{suggested_filename}"', style="bold magenta"),
                 BarColumn(style="bold white", complete_style="bold red", finished_style="bold green"),
                 DownloadColumn(),
                 TransferSpeedColumn(),
@@ -549,5 +549,5 @@ class TurboDL:
                 self.output_path = None
 
                 raise HashVerificationError(
-                    f'Hash verification failed. Hash type: "{hash_type}". Expected hash: "{expected_hash}". Actual hash: "{file_hash}"'
+                    f'Hash verification failed. Hash type: "{hash_type}". Actual hash: "{file_hash}". Expected hash: "{expected_hash}".'
                 )
