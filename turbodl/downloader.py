@@ -12,7 +12,7 @@ from typing import Any, Dict, List, Literal, Optional, Tuple, Union
 from urllib.parse import unquote, urlparse
 
 # Third-party imports
-from httpx import Client, HTTPStatusError, Limits
+from httpx import Client, HTTPError, HTTPStatusError, Limits, RemoteProtocolError
 from psutil import disk_usage, virtual_memory
 from rich.progress import BarColumn, DownloadColumn, Progress, SpinnerColumn, TextColumn, TimeRemainingColumn, TransferSpeedColumn
 from tenacity import retry, stop_after_attempt, wait_exponential
@@ -131,7 +131,6 @@ class TurboDL:
             headers=self._custom_headers,
             follow_redirects=True,
             verify=True,
-            http2=True,
             limits=Limits(max_keepalive_connections=32, max_connections=64),
             timeout=self._timeout,
         )
@@ -229,7 +228,7 @@ class TurboDL:
         return ranges
 
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=5), reraise=True)
-    def _get_file_info(self, url: str) -> Tuple[int, str, str]:
+    def _get_file_info(self, url: str) -> Tuple[Optional[int], Optional[str], Optional[str]]:
         """
         Get information about the file to be downloaded.
 
@@ -237,35 +236,35 @@ class TurboDL:
             url: The URL of the file to be downloaded.
 
         Returns:
-            A tuple containing the file size in bytes, content type, and filename.
+            A tuple containing the file size in bytes, mimetype, and filename. If the information cannot be retrieved, returns None.
         """
 
         try:
-            with self._client.stream("HEAD", url, headers=self._custom_headers, timeout=self._timeout) as r:
-                r.raise_for_status()
+            r = self._client.head(url, headers=self._custom_headers, timeout=self._timeout)
+        except RemoteProtocolError:
+            return (None, None, None)
+        except HTTPError as e:
+            raise RequestError(f"An error occurred while getting file info: {str(e)}") from e
 
-                headers = r.headers
-                content_length = int(headers.get("content-length", 0))
-                content_type = headers.get("content-type", "application/octet-stream").split(";")[0].strip()
+        headers = r.headers
 
-                if content_disposition := headers.get("content-disposition"):
-                    if "filename*=" in content_disposition:
-                        filename = content_disposition.split("filename*=")[-1].split("'")[-1]
-                    elif "filename=" in content_disposition:
-                        filename = content_disposition.split("filename=")[-1].strip("\"'")
-                    else:
-                        filename = None
-                else:
-                    filename = None
+        content_length = int(headers.get("content-length", 0))
+        content_type = headers.get("content-type", "application/octet-stream").split(";")[0].strip()
 
-                if not filename:
-                    filename = (
-                        Path(unquote(urlparse(url).path)).name or f"downloaded_file{guess_mimetype_extension(content_type) or ""}"
-                    )
+        if content_disposition := headers.get("content-disposition"):
+            if "filename*=" in content_disposition:
+                filename = content_disposition.split("filename*=")[-1].split("'")[-1]
+            elif "filename=" in content_disposition:
+                filename = content_disposition.split("filename=")[-1].strip("\"'")
+            else:
+                filename = None
+        else:
+            filename = None
 
-                return (content_length, content_type, filename)
-        except HTTPStatusError as e:
-            raise RequestError(f'Request failed with status code "{e.response.status_code}"') from e
+        if not filename:
+            filename = Path(unquote(urlparse(url).path)).name or f"file{guess_mimetype_extension(content_type) or ""}"
+
+        return (content_length, content_type, filename)
 
     @retry(stop=stop_after_attempt(5), wait=wait_exponential(multiplier=2, min=1, max=10), reraise=True)
     def _download_chunk(self, url: str, start: int, end: int, progress: Progress, task_id: int) -> bytes:
@@ -469,15 +468,21 @@ class TurboDL:
             RequestError: If an error occurs while getting file info.
         """
 
-        output_path = Path(output_path)
+        output_path = Path(output_path).resolve()
 
-        try:
-            total_size, _, suggested_filename = self._get_file_info(url)
-        except RequestError as e:
-            raise DownloadError(f"An error occurred while getting file info: {str(e)}") from e
+        total_size, mimetype, suggested_filename = self._get_file_info(url)
 
-        if not self._is_enough_space_to_download(output_path, total_size):
-            raise InsufficientSpaceError(f'Not enough space to download {total_size} bytes to "{output_path.as_posix()}"')
+        if (total_size, mimetype, suggested_filename) == (None, None, None):
+            has_unknown_size = True
+            total_size = 0
+            mimetype = "application/octet-stream"
+            suggested_filename = "file"
+        else:
+            has_unknown_size = False
+
+        if not has_unknown_size:
+            if not self._is_enough_space_to_download(output_path, total_size):
+                raise InsufficientSpaceError(f'Not enough space to download {total_size} bytes to "{output_path.as_posix()}"')
 
         try:
             if output_path.is_dir():
@@ -492,22 +497,25 @@ class TurboDL:
                     output_path = Path(output_path.parent, f"{base_name}_{counter}{extension}")
                     counter += 1
 
-            if pre_allocate_space and total_size > 0:
-                with Progress(
-                    SpinnerColumn(spinner_name="dots", style="bold cyan"),
-                    TextColumn(f"[bold cyan]Pre-allocating space for {total_size} bytes...", justify="left"),
-                    transient=True,
-                    disable=not self._show_progress_bars,
-                ) as progress:
-                    progress.add_task("", total=None)
+            if not has_unknown_size:
+                if pre_allocate_space and total_size > 0:
+                    with Progress(
+                        SpinnerColumn(spinner_name="dots", style="bold cyan"),
+                        TextColumn(f"[bold cyan]Pre-allocating space for {total_size} bytes...", justify="left"),
+                        transient=True,
+                        disable=not self._show_progress_bars,
+                    ) as progress:
+                        progress.add_task("", total=None)
 
-                    if pre_allocate_space and total_size > 0:
-                        with output_path.open("wb") as fo:
-                            fo.truncate(total_size)
+                        if pre_allocate_space and total_size > 0:
+                            with output_path.open("wb") as fo:
+                                fo.truncate(total_size)
+                else:
+                    output_path.touch(exist_ok=True)
             else:
                 output_path.touch(exist_ok=True)
 
-            self.output_path = output_path.resolve().as_posix()
+            self.output_path = output_path.as_posix()
 
             progress_columns = [
                 TextColumn(f'Downloading "{suggested_filename}"', style="bold magenta"),
@@ -519,7 +527,7 @@ class TurboDL:
             ]
 
             with Progress(*progress_columns, disable=not self._show_progress_bars) as progress:
-                task_id = progress.add_task("download", total=total_size or 100, filename=output_path.name)
+                task_id = progress.add_task("download", total=total_size or None, filename=output_path.name)
 
                 if total_size == 0:
                     Path(output_path).write_bytes(self._download_chunk(url, 0, 0, progress, task_id))
