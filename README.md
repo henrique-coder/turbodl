@@ -8,13 +8,13 @@
 
 TurboDL ia an extremely smart, fast and efficient download manager with several automations.
 
-- Uses HTTP/2 protocol to download files.
 - Built-in sophisticated download acceleration technique.
+- Uses a sophisticated algorithm to calculate the optimal number of connections based on file size and connection speed.
 - Retry failed requests efficiently.
 - Automatically detects file information before download.
 - Automatically handles redirects.
 - Supports post-download hash verification.
-- Automatically uses RAM buffer to speed up downloads and reduce disk I/O.
+- Automatically uses RAM buffer to speed up downloads and reduce disk I/O overhead.
 - Accurately displays a beautiful progress bar.
 
 <br>
