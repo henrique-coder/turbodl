@@ -80,9 +80,11 @@ jobs:
           tag_name: v${{ steps.version_info.outputs.version }}
           name: ${{ steps.version_info.outputs.extra_text != '' && format('🎉 TurboDL {0} - {1}', steps.version_info.outputs.version, steps.version_info.outputs.extra_text) || format('🎉 TurboDL {0}', steps.version_info.outputs.version) }}
           body: |
-            ## 📦 Installation Options
+            ## 📦 Summary
 
-            TurboDL is available on [GitHub](https://github.com/henrique-coder/turbodl) and [PyPI](https://pypi.org/project/turbodl).
+            > _TurboDL is an extremely smart, fast and efficient download manager with several automations._
+
+            ❇️ Available for automatic installation at [PyPI](https://pypi.org/project/turbodl) and manual installation at [GitHub](https://github.com/henrique-coder/turbodl).
 
             ### 📋 Changelog:
 

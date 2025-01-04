@@ -6,7 +6,7 @@
 ![PyPI - Format](https://img.shields.io/pypi/format/turbodl?style=flat&logo=pypi&logoColor=blue&color=blue&link=https://pypi.org/project/turbodl)
 ![PyPI - Python Compatible Versions](https://img.shields.io/pypi/pyversions/turbodl?style=flat&logo=python&logoColor=blue&color=blue&link=https://pypi.org/project/turbodl)
 
-TurboDL ia an extremely smart, fast and efficient download manager with several automations.
+TurboDL is an extremely smart, fast and efficient download manager with several automations.
 
 - Built-in sophisticated download acceleration technique.
 - Uses a sophisticated algorithm to calculate the optimal number of connections based on file size and connection speed.
