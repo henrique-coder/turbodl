@@ -97,7 +97,3 @@ If you have a suggestion that would make this better, fork the repository and cr
 3. Commit your changes ・ `git commit -m "{commit_message}"`;
 4. Push to the branch ・ `git push origin feature/{feature_name}`;
 5. Open a pull request, describing the changes you made and wait for a review.
-
-### Disclaimer
-
-Please note that downloading copyrighted content from some services may be illegal in your country. This tool is designed for educational purposes only. Use at your own risk.
