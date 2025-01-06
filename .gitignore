@@ -1,16 +1,16 @@
 # IDE
 .idea
 .venv
+
+# Cache
 __pycache__
+.ruff_cache
 
 # Directories
 .debug
-.ruff_cache
 
 # Files
-requirements-dev.txt
-debugging.py
-tempCodeRunnerFile.py
+dev.py
 
 # Extensions
 # ...

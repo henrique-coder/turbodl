@@ -25,6 +25,17 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: 📚 Load Release Config
+        id: release_config
+        run: |
+          PACKAGE_NAME=$(yq '.package.name' .github/release-config.yaml)
+          PACKAGE_TITLE=$(yq '.package.title' .github/release-config.yaml)
+          PACKAGE_DESC=$(yq '.package.description' .github/release-config.yaml)
+
+          echo "pkg_name=$PACKAGE_NAME" >> $GITHUB_OUTPUT
+          echo "pkg_title=$PACKAGE_TITLE" >> $GITHUB_OUTPUT
+          echo "pkg_desc=$PACKAGE_DESC" >> $GITHUB_OUTPUT
+
       - name: 📝 Extract Version and Text
         id: version_info
         run: |
@@ -61,7 +72,8 @@ jobs:
           check-latest: true
 
       - name: 🔧 Install Build Tools
-        run: python -m pip install --upgrade pip build twine
+        run: |
+          python -m pip install --upgrade pip build twine yq
 
       - name: 🏗️ Build Package
         run: python -m build --sdist --wheel
@@ -78,13 +90,13 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ steps.version_info.outputs.version }}
-          name: ${{ steps.version_info.outputs.extra_text != '' && format('🎉 TurboDL {0} - {1}', steps.version_info.outputs.version, steps.version_info.outputs.extra_text) || format('🎉 TurboDL {0}', steps.version_info.outputs.version) }}
+          name: ${{ steps.version_info.outputs.extra_text != '' && format('🎉 {0} {1} - {2}', steps.release_config.outputs.pkg_title, steps.version_info.outputs.version, steps.version_info.outputs.extra_text) || format('🎉 {0} {1}', steps.release_config.outputs.pkg_title, steps.version_info.outputs.version) }}
           body: |
             ## 📦 Summary
 
-            > _TurboDL is an extremely smart, fast and efficient download manager with several automations._
+            > _${{ steps.release_config.outputs.pkg_desc }}_
 
-            ❇️ Available for automatic installation at [PyPI](https://pypi.org/project/turbodl) and manual installation at [GitHub](https://github.com/henrique-coder/turbodl).
+            ❇️ Available for automatic installation at [PyPI](https://pypi.org/project/${{ steps.release_config.outputs.pkg_name }}) and manual installation at [GitHub](https://github.com/${{ github.repository }}).
 
             ### 📋 Changelog:
 
@@ -92,7 +104,7 @@ jobs:
 
             ### 📊 Compare Changes
 
-            [View all changes](https://github.com/henrique-coder/turbodl/compare/${{ steps.previoustag.outputs.tag }}...v${{ steps.version_info.outputs.version }})
+            [View all changes](https://github.com/${{ github.repository }}/compare/${{ steps.previoustag.outputs.tag }}...v${{ steps.version_info.outputs.version }})
           draft: false
           prerelease: false
           files: |
@@ -103,3 +115,6 @@ jobs:
 
       - name: 🚀 Upload to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          # password: ${{ secrets.PYPI_API_TOKEN }}
+          verbose: true
