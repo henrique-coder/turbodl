@@ -10,8 +10,11 @@ authors = ["henrique-coder <hjyz6rqyb@mozmail.com>"]
 license = "MIT"
 readme = "README.md"
 homepage = "https://github.com/henrique-coder/turbodl"
-documentation = "https://github.com/henrique-coder/turbodl"
+documentation = "https://github.com/henrique-coder/turbodl/blob/main/README.md"
 repository = "https://github.com/henrique-coder/turbodl"
+maintainers = ["henrique-coder <hjyz6rqyb@mozmail.com>"]
+packages = [{ include = "turbodl" }]
+include = ["LICENSE"]
 keywords = ["dl", "downloader", "manager", "python", "smart", "turbodl"]
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -27,6 +30,10 @@ classifiers = [
     "Programming Language :: Python :: Implementation :: CPython",
     "Programming Language :: Python :: Implementation :: PyPy",
 ]
+
+[tool.poetry.urls]
+"Bug Tracker" = "https://github.com/henrique-coder/turbodl/issues"
+"Changelog" = "https://github.com/henrique-coder/turbodl/releases/latest"
 
 [tool.poetry.dependencies]
 python = "^3.9"
