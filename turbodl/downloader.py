@@ -262,7 +262,7 @@ class TurboDL:
             filename = None
 
         if not filename:
-            filename = Path(unquote(urlparse(url).path)).name or f"file{guess_mimetype_extension(content_type) or ""}"
+            filename = Path(unquote(urlparse(url).path)).name or f"file{guess_mimetype_extension(content_type) or ''}"
 
         return (content_length, content_type, filename)
 
