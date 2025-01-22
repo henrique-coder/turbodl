@@ -1,4 +1,5 @@
-# Settings created by https://github.com/henrique-coder
+# These settings were created and optimized by https://github.com/henrique-coder, for the ruff software (https://github.com/astral-sh/ruff).
+# Put this file (ruff.toml) in your project root folder and run `ruff check` or `ruff format` (make sure to run `pip install -U ruff` first).
 
 include = ["*.py"]
 exclude = [".idea", ".venv", "__pycache__", ".ruff_cache"]
