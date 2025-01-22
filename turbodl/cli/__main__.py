@@ -2,8 +2,8 @@
 from pathlib import Path
 
 # Third-party imports
-from typer import Typer, Argument, Option, Exit
 from rich.console import Console
+from typer import Argument, Exit, Option, Typer
 
 # Local imports
 from turbodl.downloader import TurboDL
@@ -55,7 +55,7 @@ def main(
         "-pas",
         help="Whether to pre-allocate space for the file, useful to avoid disk fragmentation.",
     ),
-    use_ram_buffer: bool = Option(True, "--use-ram-buffer", "-urb", help="Whether to use a RAM buffer to download the file."),
+    use_ram_buffer: bool = Option(False, "--use-ram-buffer", "-urb", help="Whether to use a RAM buffer to download the file."),
 ) -> None:
     try:
         turbodl = TurboDL(
@@ -77,7 +77,7 @@ def main(
 
     except Exception as e:
         console.print(f"[red]Error: {str(e)}")
-        raise Exit(1)
+        raise Exit(1) from e
 
 
 if __name__ == "__main__":
