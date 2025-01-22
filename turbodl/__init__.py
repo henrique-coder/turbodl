@@ -1,16 +1,20 @@
-# Built-in imports
-from typing import List
-
 # Local imports
 from .downloader import TurboDL
-from .exceptions import DownloadError, HashVerificationError, InsufficientSpaceError, RequestError, TurboDLError
+from .exceptions import (
+    DownloadError,
+    HashVerificationError,
+    InsufficientSpaceError,
+    InvalidArgumentError,
+    OnlineRequestError,
+    TurboDLError,
+)
 
-
-__all__: List[str] = [
-    "TurboDL",
+__all__: list[str] = [
     "DownloadError",
     "HashVerificationError",
     "InsufficientSpaceError",
-    "RequestError",
+    "InvalidArgumentError",
+    "OnlineRequestError",
+    "TurboDL",
     "TurboDLError",
 ]
