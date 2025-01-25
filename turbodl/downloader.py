@@ -13,13 +13,13 @@ from urllib.parse import unquote, urlparse
 
 # Third-party imports
 from httpx import Client, HTTPError, HTTPStatusError, Limits, RemoteProtocolError
-from psutil import disk_usage, virtual_memory
+from psutil import virtual_memory
 from rich.progress import BarColumn, DownloadColumn, Progress, SpinnerColumn, TextColumn, TimeRemainingColumn, TransferSpeedColumn
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 # Local imports
 from .exceptions import DownloadError, HashVerificationError, InsufficientSpaceError, InvalidArgumentError, OnlineRequestError
-from .functions import looks_like_a_ram_directory
+from .functions import has_available_space, looks_like_a_ram_directory
 
 
 class ChunkBuffer:
@@ -146,7 +146,7 @@ class TurboDL:
         if isinstance(self._max_connections, str) and self._max_connections.isdigit():
             self._max_connections = int(self._max_connections)
 
-        if not self._max_connections == "auto" or isinstance(self._max_connections, int) and 1 <= self._max_connections <= 24:
+        if not (self._max_connections == "auto" or (isinstance(self._max_connections, int) and 1 <= self._max_connections <= 24)):
             raise InvalidArgumentError("max_connections must be 'auto' or an integer between 1 and 24")
 
         if self._connection_speed <= 0:
@@ -178,31 +178,6 @@ class TurboDL:
 
         # Initialize the output path to None
         self.output_path: str = None
-
-    def _is_enough_space_to_download(self, path: str | PathLike, size: int) -> bool:
-        """
-        Checks if there is enough space to download the file.
-
-        Args:
-            path (str | PathLike): The path to save the downloaded file to.
-            size (int): The size of the file in bytes.
-
-        Returns:
-            bool: True if there is enough space, False otherwise.
-        """
-
-        # Convert the path to Path if it is a string
-        path = Path(path)
-
-        # Calculate the required space, leaving 1 GB of free space
-        required_space = size + (1 * 1024 * 1024 * 1024)
-
-        # Get the disk usage object for the parent directory if the path is a file or does not exist
-        # Otherwise, get the disk usage object for the path itself
-        disk_usage_obj = disk_usage(path.parent.as_posix() if path.is_file() or not path.exists() else path.as_posix())
-
-        # Check if there is enough space
-        return bool(disk_usage_obj.free >= required_space)
 
     def _calculate_connections(self, file_size: int, connection_speed: float | Literal["auto"]) -> int:
         """
@@ -611,7 +586,7 @@ class TurboDL:
             url (str): The download URL to download the file from. Defaults to None.
             output_path (str | PathLike | None): The path to save the downloaded file to. If the path is a directory, the file name will be generated from the server response. If the path is a file, the file will be saved with the provided name. If not provided, the file will be saved to the current working directory. Defaults to None.
             pre_allocate_space (bool): Whether to pre-allocate space for the file, useful to avoid disk fragmentation. Defaults to False.
-            use_ram_buffer (bool | Literal["auto"]): Whether to use a RAM buffer to download the file. If 'auto', the RAM buffer will be used if the output path is not a RAM directory. Defaults to 'auto'.
+            use_ram_buffer (bool | Literal["auto"]): Whether to use a RAM buffer to download the file. If True, the file will be downloaded with the help of a RAM buffer. If False, the file will be downloaded directly to the output file path. If 'auto', the RAM buffer will be used if the output path is not a RAM directory. Defaults to 'auto'.
             overwrite (bool): Overwrite the file if it already exists. Otherwise, a '_1', '_2', etc. suffix will be added. Defaults to True.
             expected_hash (str | None): The expected hash of the downloaded file. If not provided, the hash will not be checked. Defaults to None.
             hash_type (str): The hash type to use for the hash verification. Defaults to 'md5'.
@@ -632,12 +607,15 @@ class TurboDL:
         output_path = Path.cwd() if output_path is None else Path(output_path).resolve()
 
         # Check if the use_ram_buffer is a boolean or 'auto'
-        if not use_ram_buffer == "auto" or isinstance(use_ram_buffer, bool):
+        if not (use_ram_buffer == "auto" or isinstance(use_ram_buffer, bool)):
             raise InvalidArgumentError("use_ram_buffer must be a boolean or 'auto'")
+
+        # Determine if the output path is a RAM directory
+        is_ram_directory = looks_like_a_ram_directory(output_path)
 
         # Determine if RAM buffer should be used (if not provided)
         if use_ram_buffer == "auto":
-            use_ram_buffer = not looks_like_a_ram_directory(output_path)
+            use_ram_buffer = not is_ram_directory
 
         # Get the file info from the URL
         total_size, mimetype, suggested_filename = self._get_file_info(url)
@@ -652,7 +630,7 @@ class TurboDL:
             has_unknown_size = False
 
         # Check if there is enough space to download the file
-        if not has_unknown_size and not self._is_enough_space_to_download(output_path, total_size):
+        if not has_unknown_size and not has_available_space(output_path, total_size):
             raise InsufficientSpaceError(f'Not enough space to download {total_size} bytes to "{output_path.as_posix()}"')
 
         try:
@@ -701,9 +679,7 @@ class TurboDL:
                 TimeRemainingColumn(),
                 TextColumn("[bold][progress.percentage]{task.percentage:>3.0f}%"),
                 TextColumn(
-                    "[bold white](with RAM helper, writing to buffer)"
-                    if use_ram_buffer
-                    else "[bold white](without RAM helper, writing directly)",
+                    f"[bold white]({('with' if use_ram_buffer else 'without')} RAM buffer, writing to {('RAM' if is_ram_directory else 'DISK')})",
                     justify="right",
                 ),
             ]
