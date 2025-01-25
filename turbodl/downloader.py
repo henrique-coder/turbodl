@@ -344,9 +344,10 @@ class TurboDL:
                 filename = content_disposition.split("filename*=")[-1].split("'")[-1]
             elif "filename=" in content_disposition:
                 filename = content_disposition.split("filename=")[-1].strip("\"'")
-        else:
-            # If the content disposition header is not present, use the URL path as the filename
-            filename = Path(unquote(urlparse(url).path)).name or f"file{guess_mimetype_extension(content_type) or ''}"
+
+        if not filename:
+            # If qfilename is not found, use the URL path as the filename
+            filename = Path(unquote(urlparse(url).path)).name or f"unknown_file{guess_mimetype_extension(content_type) or ''}"
 
         # Return the file information
         return (content_length, content_type, filename)
