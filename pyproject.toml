@@ -6,31 +6,45 @@ build-backend = "poetry.core.masonry.api"
 name = "turbodl"
 version = "0.2.0"
 description = "TurboDL is an extremely smart, fast, and efficient download manager with several automations."
-authors = ["henrique-coder <hjyz6rqyb@mozmail.com>"]
 license = "MIT"
 readme = "README.md"
-homepage = "https://github.com/henrique-coder/turbodl"
-documentation = "https://github.com/henrique-coder/turbodl/blob/main/README.md"
-repository = "https://github.com/henrique-coder/turbodl"
+authors = ["henrique-coder <hjyz6rqyb@mozmail.com>"]
 maintainers = ["henrique-coder <hjyz6rqyb@mozmail.com>"]
-packages = [{ include = "turbodl" }]
-include = ["LICENSE"]
-keywords = ["dl", "downloader", "manager", "python", "smart", "turbodl"]
+keywords = [
+    "dl",
+    "downloader",
+    "manager",
+    "python",
+    "smart",
+    "turbodl"
+]
 classifiers = [
     "Development Status :: 4 - Beta",
+    "Environment :: Console",
     "Intended Audience :: Developers",
-    "Topic :: Software Development :: Libraries",
     "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3 :: Only",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
-    "Programming Language :: Python :: 3 :: Only",
     "Programming Language :: Python :: Implementation :: CPython",
     "Programming Language :: Python :: Implementation :: PyPy",
+    "Topic :: Internet",
+    "Topic :: Software Development :: Libraries",
+    "Typing :: Typed"
+]
+packages = [{ include = "turbodl" }]
+include = [
+    "LICENSE",
+    "turbodl/py.typed"
 ]
 
 [tool.poetry.urls]
+homepage = "https://github.com/henrique-coder/turbodl"
+documentation = "https://github.com/henrique-coder/turbodl/blob/main/README.md"
+repository = "https://github.com/henrique-coder/turbodl"
 "Bug Tracker" = "https://github.com/henrique-coder/turbodl/issues"
 "Changelog" = "https://github.com/henrique-coder/turbodl/releases/latest"
 
@@ -45,8 +59,13 @@ typer = "0.15.1"
 [tool.poetry.group.test.dependencies]
 pytest = "8.3.4"
 
-[tool.poetry.group.format.dependencies]
+[tool.poetry.group.lint.dependencies]
 ruff = "0.9.3"
+
+[tool.poetry.group.typecheck.dependencies]
+mypy = "1.14.1"
+pydantic = "2.10.6"
+types-psutil = "6.1.0.20241221"
 
 [tool.poetry.scripts]
 turbodl = "turbodl.cli.__main__:app"
