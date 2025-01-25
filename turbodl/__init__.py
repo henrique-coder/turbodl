@@ -1,3 +1,6 @@
+# Built-in imports
+from importlib.metadata import version
+
 # Local imports
 from .downloader import TurboDL
 from .exceptions import (
@@ -18,3 +21,4 @@ __all__: list[str] = [
     "TurboDL",
     "TurboDLError",
 ]
+__version__ = version("turbodl")
