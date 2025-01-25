@@ -3,71 +3,77 @@ from rich.console import Console
 from typer import Argument, Exit, Option, Typer
 
 # Local imports
+from turbodl import __version__
 from turbodl.downloader import TurboDL
 from turbodl.exceptions import TurboDLError
 
 
-app = Typer(no_args_is_help=True, add_completion=False)
+app = Typer(
+    no_args_is_help=True, add_completion=False, context_settings={"help_option_names": ["-h", "--help"]}, rich_markup_mode="rich"
+)
 console = Console()
 
 
-@app.command()
-def main(
-    url: str = Argument(..., help="The download URL to download the file from.", show_default=False),
-    output_path: str = Argument(
-        None,
-        help="The path to save the downloaded file to. If the path is a directory, the file name will be generated from the server response. If the path is a file, the file will be saved with the provided name. If not provided, the file will be saved to the current working directory.",
-        show_default="Current working directory",
-    ),
-    max_connections: str = Option(
-        "auto",
-        "--max-connections",
-        "-mc",
-        help="The maximum number of connections to use for downloading the file ('auto' will dynamically calculate the number of connections based on the file size and connection speed and an integer between 1 and 24 will set the number of connections to that value).",
-    ),
-    connection_speed: float = Option(
-        80,
-        "--connection-speed",
-        "-cs",
-        help="Your connection speed in Mbps (megabits per second) (your connection speed will be used to help calculate the optimal number of connections).",
-    ),
-    show_progress_bars: bool = Option(
-        True, "--show-progress-bars/--hide-progress-bars", "-spb/-hpb", help="Show or hide all progress bars."
-    ),
-    timeout: int = Option(
-        None,
-        "--timeout",
-        "-t",
-        help="Timeout in seconds for the download process. Or None for no timeout.",
-        show_default="No timeout",
-    ),
-    pre_allocate_space: bool = Option(
-        False,
-        "--pre-allocate-space/--no-pre-allocate-space",
-        "-pas/-npas",
-        help="Whether to pre-allocate space for the file, useful to avoid disk fragmentation.",
-    ),
-    use_ram_buffer: bool = Option(
-        True,
-        "--use-ram-buffer/--no-use-ram-buffer",
-        "-urb/-nurb",
-        help="Whether to use a RAM buffer to download the file. If True, it will use up to 30% of your total memory to assist in downloading the file, further speeding up your download and preserving your HDD/SSD. Otherwise it will download and write the file directly to the output file path (very slow).",
-    ),
-    overwrite: bool = Option(
-        True,
-        "--overwrite/--no-overwrite",
-        "-o/-no",
-        help="Overwrite the file if it already exists. Otherwise, a '_1', '_2', etc. suffix will be added.",
-    ),
-    expected_hash: str = Option(
-        None,
-        "--expected-hash",
-        "-eh",
-        help="The expected hash of the downloaded file. If not provided, the hash will not be checked.",
-        show_default="No hash check",
-    ),
-    hash_type: str = Option("md5", "--hash-type", "-ht", help="The hash type to use for the hash verification."),
+def process_buffer_options(
+    auto: bool, use: bool, disable: bool, hide_progress: bool, preallocate: bool, no_overwrite: bool
+) -> tuple[str | bool, bool, bool, bool]:
+    if auto:
+        ram_buffer = "auto"
+    elif use:
+        ram_buffer = True
+    elif disable:
+        ram_buffer = False
+    else:
+        ram_buffer = "auto"
+
+    return ram_buffer, not hide_progress, preallocate, not no_overwrite
+
+
+def version_callback(value: bool) -> None:
+    if value:
+        console.print(f"[bold white]TurboDL (turbodl) [bold green]{__version__}[/]")
+        raise Exit()
+
+
+@app.callback(invoke_without_command=True)
+def callback(
+    version: bool = Option(None, "--version", "-v", help="Show version and exit.", callback=version_callback, is_eager=True),
 ) -> None:
+    """[bold cyan]TurboDL[/] is an extremely smart, fast, and efficient download manager with several automations.
+
+    [bold yellow]\nExamples:[/]\n   Download a file:\n   [dim]$ turbodl download https://example.com/file.zip\n\n   Download a file to a specific path:\n   [dim]$ turbodl download https://example.com/file.zip /path/to/file[/]
+    [bold yellow]\nMore Help:[/]\n   For detailed download options, use:\n   [dim]$ turbodl download --help[/]"""
+
+
+@app.command()
+def download(
+    url: str = Argument(..., help="Download URL."),
+    output_path: str = Argument(
+        None, help="Destination path. If directory, filename is derived from server response.", show_default="Current directory"
+    ),
+    max_connections: str = Option("auto", "--max-connections", "-mc", help="Max connections: 'auto' or integer (1-24)."),
+    connection_speed: float = Option(80, "--connection-speed", "-cs", help="Connection speed in Mbps for optimal connections."),
+    hide_progress_bars: bool = Option(
+        False, "--hide-progress-bars", "-hpb", help="Hide progress bars (shown by default).", is_flag=True
+    ),
+    allocate_space: bool = Option(
+        False, "--pre-allocate-space", "-pas", help="Pre-allocate disk space before downloading.", is_flag=True
+    ),
+    auto_ram_buffer: bool = Option(
+        False, "--auto-ram-buffer", "-arb", help="Use RAM buffer automatically if path isn't RAM dir (default).", is_flag=True
+    ),
+    use_ram_buffer: bool = Option(False, "--use-ram-buffer", "-urb", help="Always use RAM buffer.", is_flag=True),
+    no_ram_buffer: bool = Option(False, "--no-ram-buffer", "-nrb", help="Never use RAM buffer.", is_flag=True),
+    no_overwrite: bool = Option(
+        False, "--no-overwrite", "-no", help="Don't overwrite existing files (overwrite by default).", is_flag=True
+    ),
+    timeout: int = Option(None, "--timeout", "-t", help="Download timeout in seconds."),
+    expected_hash: str = Option(None, "--expected-hash", "-eh", help="Expected file hash for verification."),
+    hash_type: str = Option("md5", "--hash-type", "-ht", help="Hash algorithm for verification."),
+) -> None:
+    ram_buffer_value, show_progress_bars, pre_allocate_space, overwrite = process_buffer_options(
+        auto_ram_buffer, use_ram_buffer, no_ram_buffer, hide_progress_bars, allocate_space, no_overwrite
+    )
     try:
         turbodl = TurboDL(
             max_connections=max_connections,
@@ -79,7 +85,7 @@ def main(
             url=url,
             output_path=output_path,
             pre_allocate_space=pre_allocate_space,
-            use_ram_buffer=use_ram_buffer,
+            use_ram_buffer=ram_buffer_value,
             overwrite=overwrite,
             expected_hash=expected_hash,
             hash_type=hash_type,
