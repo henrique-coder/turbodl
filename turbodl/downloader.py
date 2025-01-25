@@ -100,6 +100,8 @@ class ChunkBuffer:
 
             return chunk_data
 
+        return None
+
 
 class TurboDL:
     """
@@ -137,7 +139,7 @@ class TurboDL:
         """
 
         # Initialize the instance variables
-        self._max_connections: int | Literal["auto"] = max_connections
+        self._max_connections: int | str | Literal["auto"] = max_connections
         self._connection_speed: float = connection_speed
 
         # Validate the arguments
@@ -175,7 +177,7 @@ class TurboDL:
         )
 
         # Initialize the output path to None
-        self.output_path: str = None
+        self.output_path: str | None = None
 
     def _calculate_connections(self, file_size: int, connection_speed: float | Literal["auto"]) -> int:
         """
@@ -206,7 +208,7 @@ class TurboDL:
 
         # Return the user-specified number of connections if not set to 'auto'
         if self._max_connections != "auto":
-            return self._max_connections
+            return int(self._max_connections)
 
         # Convert file size from bytes to megabytes
         file_size_mb = file_size / (1024 * 1024)
@@ -503,10 +505,11 @@ class TurboDL:
         url: str,
         output_path: str | PathLike | None = None,
         pre_allocate_space: bool = False,
-        use_ram_buffer: bool | Literal["auto"] = "auto",
+        use_ram_buffer: bool | str | Literal["auto"] = "auto",
         overwrite: bool = True,
         expected_hash: str | None = None,
-        hash_type: Literal[
+        hash_type: str
+        | Literal[
             "md5",
             "sha1",
             "sha224",
@@ -530,10 +533,10 @@ class TurboDL:
             url (str): The download URL to download the file from. Defaults to None.
             output_path (str | PathLike | None): The path to save the downloaded file to. If the path is a directory, the file name will be generated from the server response. If the path is a file, the file will be saved with the provided name. If not provided, the file will be saved to the current working directory. Defaults to None.
             pre_allocate_space (bool): Whether to pre-allocate space for the file, useful to avoid disk fragmentation. Defaults to False.
-            use_ram_buffer (bool | Literal["auto"]): Whether to use a RAM buffer to download the file. If True, the file will be downloaded with the help of a RAM buffer. If False, the file will be downloaded directly to the output file path. If 'auto', the RAM buffer will be used if the output path is not a RAM directory. Defaults to 'auto'.
+            use_ram_buffer (bool | str | Literal["auto"]): Whether to use a RAM buffer to download the file. If True, the file will be downloaded with the help of a RAM buffer. If False, the file will be downloaded directly to the output file path. If 'auto', the RAM buffer will be used if the output path is not a RAM directory. Defaults to 'auto'.
             overwrite (bool): Overwrite the file if it already exists. Otherwise, a '_1', '_2', etc. suffix will be added. Defaults to True.
             expected_hash (str | None): The expected hash of the downloaded file. If not provided, the hash will not be checked. Defaults to None.
-            hash_type (str): The hash type to use for the hash verification. Defaults to 'md5'.
+            hash_type (str | Literal['md5', 'sha1', 'sha224', 'sha256', 'sha384', 'sha512', 'blake2b', 'blake2s', 'sha3_224', 'sha3_256', 'sha3_384', 'sha3_512', 'shake_128', 'shake_256']): The hash type to use for the hash verification. Defaults to 'md5'.
 
         Raises:
             InvalidArgumentError: If the URL is not provided or the use_ram_buffer is not a boolean or 'auto'.
@@ -572,9 +575,9 @@ class TurboDL:
             suggested_filename = "unknown_file"
         else:
             has_unknown_info = False
-            total_size = file_info["size"]
-            # mimetype = file_info["mimetype"]  # TODO: Use it?
-            suggested_filename = file_info["filename"]
+            total_size = int(file_info["size"])
+            # mimetype = str(file_info["mimetype"])  # TODO: Use it?
+            suggested_filename = str(file_info["filename"])
 
         # Check if there is enough space to download the file
         if not has_unknown_info and not has_available_space(output_path, total_size):

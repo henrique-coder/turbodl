@@ -48,16 +48,16 @@ def fetch_file_info(
         raise OnlineRequestError(f"An error occurred while getting file info: {str(e)}") from e
 
     # Get the headers from the response
-    headers = r.headers
+    r_headers = r.headers
 
     # Get the content length from the headers
-    content_length = int(headers.get("content-length", 0))
+    content_length = int(r_headers.get("content-length", 0))
 
     # Get the content type from the headers
-    content_type = headers.get("content-type", "application/octet-stream").split(";")[0].strip()
+    content_type = r_headers.get("content-type", "application/octet-stream").split(";")[0].strip()
 
     # Get the filename from the content disposition header
-    content_disposition = headers.get("content-disposition")
+    content_disposition = r_headers.get("content-disposition")
     filename = None
 
     if content_disposition:
