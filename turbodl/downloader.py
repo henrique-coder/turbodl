@@ -19,6 +19,7 @@ from tenacity import retry, stop_after_attempt, wait_exponential
 
 # Local imports
 from .exceptions import DownloadError, HashVerificationError, InsufficientSpaceError, InvalidArgumentError, OnlineRequestError
+from .functions import looks_like_a_ram_directory
 
 
 class ChunkBuffer:
@@ -145,7 +146,7 @@ class TurboDL:
         if isinstance(self._max_connections, str) and self._max_connections.isdigit():
             self._max_connections = int(self._max_connections)
 
-        if not (self._max_connections == "auto" or (isinstance(self._max_connections, int) and 1 <= self._max_connections <= 24)):
+        if not self._max_connections == "auto" or isinstance(self._max_connections, int) and 1 <= self._max_connections <= 24:
             raise InvalidArgumentError("max_connections must be 'auto' or an integer between 1 and 24")
 
         if self._connection_speed <= 0:
@@ -346,7 +347,7 @@ class TurboDL:
                 filename = content_disposition.split("filename=")[-1].strip("\"'")
 
         if not filename:
-            # If qfilename is not found, use the URL path as the filename
+            # If filename is not found, use the URL path as the filename
             filename = Path(unquote(urlparse(url).path)).name or f"unknown_file{guess_mimetype_extension(content_type) or ''}"
 
         # Return the file information
@@ -527,11 +528,18 @@ class TurboDL:
             """
             Download a chunk of the file and write it to the output file.
 
+            This function is designed to be used with the ThreadPoolExecutor to download chunks concurrently.
+            It will raise a DownloadError if any exception occurs during download.
+
             Args:
                 start (int): The start byte index of the chunk.
                 end (int): The end byte index of the chunk.
+
+            Raises:
+                DownloadError: If any exception occurs during download.
             """
 
+            # Set the Range header for the request
             headers = {**self._custom_headers}
 
             if end > 0:
@@ -540,16 +548,22 @@ class TurboDL:
             try:
                 # Stream the file chunk from the server
                 with self._client.stream("GET", url, headers=headers) as r:
+                    # Raise an exception if the response status code is not 200
                     r.raise_for_status()
 
-                    # Acquire the write lock before writing to the file
-                    with write_lock, Path(output_path).open("r+b") as fo:
-                        fo.seek(start)
+                    # Iterate over the response and write the chunk to the file
+                    for data in r.iter_bytes(chunk_size=1024 * 1024):
+                        chunk_len = len(data)
 
-                        # Write the chunk to the file and update the progress bar
-                        for data in r.iter_bytes(chunk_size=8192):
+                        # Acquire the write lock and open the output file in read-write mode
+                        with write_lock, Path(output_path).open("r+b") as fo:
+                            # Seek to the start of the chunk and write the data
+                            fo.seek(start)
                             fo.write(data)
-                            progress.update(task_id, advance=len(data))
+                            start += chunk_len
+
+                        # Update the progress bar
+                        progress.update(task_id, advance=chunk_len)
             except Exception as e:
                 # Raise a DownloadError if any exception occurs during download
                 raise DownloadError(f"An error occurred while downloading chunk: {str(e)}") from e
@@ -570,7 +584,7 @@ class TurboDL:
         url: str,
         output_path: str | PathLike | None = None,
         pre_allocate_space: bool = False,
-        use_ram_buffer: bool = True,
+        use_ram_buffer: bool | Literal["auto"] = "auto",
         overwrite: bool = True,
         expected_hash: str | None = None,
         hash_type: Literal[
@@ -597,13 +611,13 @@ class TurboDL:
             url (str): The download URL to download the file from. Defaults to None.
             output_path (str | PathLike | None): The path to save the downloaded file to. If the path is a directory, the file name will be generated from the server response. If the path is a file, the file will be saved with the provided name. If not provided, the file will be saved to the current working directory. Defaults to None.
             pre_allocate_space (bool): Whether to pre-allocate space for the file, useful to avoid disk fragmentation. Defaults to False.
-            use_ram_buffer (bool): Whether to use a RAM buffer to download the file. If True, it will use up to 30% of your total memory to assist in downloading the file, further speeding up your download and preserving your HDD/SSD. Otherwise it will download and write the file directly to the output file path (very slow). Defaults to True.
+            use_ram_buffer (bool | Literal["auto"]): Whether to use a RAM buffer to download the file. If 'auto', the RAM buffer will be used if the output path is not a RAM directory. Defaults to 'auto'.
             overwrite (bool): Overwrite the file if it already exists. Otherwise, a '_1', '_2', etc. suffix will be added. Defaults to True.
             expected_hash (str | None): The expected hash of the downloaded file. If not provided, the hash will not be checked. Defaults to None.
             hash_type (str): The hash type to use for the hash verification. Defaults to 'md5'.
 
         Raises:
-            InvalidArgumentError: If the URL is not provided.
+            InvalidArgumentError: If the URL is not provided or the use_ram_buffer is not a boolean or 'auto'.
             DownloadError: If an error occurs while downloading the file.
             HashVerificationError: If the hash of the downloaded file does not match the expected hash.
             InsufficientSpaceError: If there is not enough space to download the file.
@@ -614,10 +628,18 @@ class TurboDL:
         if not url:
             raise InvalidArgumentError("URL is required")
 
-        # Resolve the output path
+        # Resolve the output path, defaulting to the current working directory if not provided
         output_path = Path.cwd() if output_path is None else Path(output_path).resolve()
 
-        # Get the file info
+        # Check if the use_ram_buffer is a boolean or 'auto'
+        if not use_ram_buffer == "auto" or isinstance(use_ram_buffer, bool):
+            raise InvalidArgumentError("use_ram_buffer must be a boolean or 'auto'")
+
+        # Determine if RAM buffer should be used (if not provided)
+        if use_ram_buffer == "auto":
+            use_ram_buffer = not looks_like_a_ram_directory(output_path)
+
+        # Get the file info from the URL
         total_size, mimetype, suggested_filename = self._get_file_info(url)
 
         # Handle the case where the file size is not known
@@ -634,11 +656,11 @@ class TurboDL:
             raise InsufficientSpaceError(f'Not enough space to download {total_size} bytes to "{output_path.as_posix()}"')
 
         try:
-            # Handle the case where the output path is a directory
+            # If output path is a directory, append suggested filename
             if output_path.is_dir():
                 output_path = Path(output_path, suggested_filename)
 
-            # Handle the case where the output file already exists
+            # Handle the case where output file already exists
             if not overwrite:
                 base_name = output_path.stem
                 extension = output_path.suffix
@@ -648,9 +670,8 @@ class TurboDL:
                     output_path = Path(output_path.parent, f"{base_name}_{counter}{extension}")
                     counter += 1
 
-            # Handle the case where the file size is known
+            # Handle pre-allocation of space if requested
             if not has_unknown_size:
-                # Pre-allocate space for the file if requested
                 if pre_allocate_space and total_size > 0:
                     with Progress(
                         SpinnerColumn(spinner_name="dots", style="bold cyan"),
@@ -671,7 +692,7 @@ class TurboDL:
             # Set the output path
             self.output_path = output_path.as_posix()
 
-            # Set up the progress columns
+            # Set up the progress columns for display
             progress_columns = [
                 TextColumn(f'Downloading "{suggested_filename}"', style="bold magenta"),
                 BarColumn(style="bold white", complete_style="bold red", finished_style="bold green"),
@@ -679,32 +700,37 @@ class TurboDL:
                 TransferSpeedColumn(),
                 TimeRemainingColumn(),
                 TextColumn("[bold][progress.percentage]{task.percentage:>3.0f}%"),
+                TextColumn(
+                    "[bold white](with RAM helper, writing to buffer)"
+                    if use_ram_buffer
+                    else "[bold white](without RAM helper, writing directly)",
+                    justify="right",
+                ),
             ]
 
-            # Download the file
+            # Perform the download
             with Progress(*progress_columns, disable=not self._show_progress_bars) as progress:
                 task_id = progress.add_task("download", total=total_size or None, filename=output_path.name)
 
-                # Handle the case where the file size is not known
+                # Determine download method based on buffer usage
                 if total_size == 0:
                     Path(output_path).write_bytes(self._download_chunk(url, 0, 0, progress, task_id))
                 else:
-                    # Use a RAM buffer to download the file if requested
                     if use_ram_buffer:
                         self._download_with_buffer(url, output_path, total_size, progress, task_id)
                     else:
                         self._download_direct(url, output_path, total_size, progress, task_id)
         except KeyboardInterrupt:
-            # Handle the case where the user interrupts the download
+            # Handle download interruption by user
             Path(output_path).unlink(missing_ok=True)
             self.output_path = None
 
             return None
         except Exception as e:
-            # Handle any other exceptions
+            # Handle any other download exceptions
             raise DownloadError(f"An error occurred while downloading file: {str(e)}") from e
 
-        # Verify the hash of the downloaded file if requested
+        # Verify the hash of the downloaded file if an expected hash is provided
         if expected_hash is not None:
             hasher = hashlib_new(hash_type)
 
@@ -715,7 +741,7 @@ class TurboDL:
             file_hash = hasher.hexdigest()
 
             if file_hash != expected_hash:
-                # Handle the case where the hash verification fails
+                # Handle hash verification failure
                 Path(output_path).unlink(missing_ok=True)
                 self.output_path = None
 
