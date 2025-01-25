@@ -1,4 +1,5 @@
 # Third-party imports
+from httpx import get
 from rich.console import Console
 from typer import Argument, Exit, Option, Typer
 
@@ -35,6 +36,27 @@ def version_callback(value: bool) -> None:
         raise Exit()
 
 
+def check_for_updates() -> None:
+    try:
+        r = get("https://api.github.com/repos/henrique-coder/turbodl/releases/latest", follow_redirects=False)
+
+        if r.status_code == 200:
+            latest_version = r.json()["tag_name"].replace("v", "")
+
+            if latest_version > __version__:
+                console.print(
+                    f"[yellow]Update available![/] Current version: [red]{__version__}[/] → Latest version: [green]{latest_version}[/]"
+                )
+                console.print("\nTo update, run: [bold cyan]pip install -U turbodl[/]")
+            else:
+                console.print(f"[green]TurboDL is up to date![/] Current version: [bold]{__version__}[/]")
+        else:
+            console.print("[red]Failed to check for updates: Could not reach GitHub API[/]")
+    except Exception as e:
+        console.print(f"[red]Failed to check for updates: {str(e)}[/]")
+        raise Exit(1) from e
+
+
 @app.callback(invoke_without_command=True)
 def callback(
     version: bool = Option(None, "--version", "-v", help="Show version and exit.", callback=version_callback, is_eager=True),
@@ -43,6 +65,15 @@ def callback(
 
     [bold yellow]\nExamples:[/]\n   Download a file:\n   [dim]$ turbodl download https://example.com/file.zip\n\n   Download a file to a specific path:\n   [dim]$ turbodl download https://example.com/file.zip /path/to/file[/]
     [bold yellow]\nMore Help:[/]\n   For detailed download options, use:\n   [dim]$ turbodl download --help[/]"""
+
+
+@app.command()
+def check() -> None:
+    """
+    Check for available updates.
+    """
+
+    check_for_updates()
 
 
 @app.command()
@@ -71,6 +102,10 @@ def download(
     expected_hash: str = Option(None, "--expected-hash", "-eh", help="Expected file hash for verification."),
     hash_type: str = Option("md5", "--hash-type", "-ht", help="Hash algorithm for verification."),
 ) -> None:
+    """
+    Download a file from the provided URL to the specified output path (with a lot of options)
+    """
+
     ram_buffer_value, show_progress_bars, pre_allocate_space, overwrite = process_buffer_options(
         auto_ram_buffer, use_ram_buffer, no_ram_buffer, hide_progress_bars, allocate_space, no_overwrite
     )
