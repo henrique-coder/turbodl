@@ -3,23 +3,21 @@ from concurrent.futures import ThreadPoolExecutor
 from hashlib import new as hashlib_new
 from io import BytesIO
 from math import ceil, log2, sqrt
-from mimetypes import guess_extension as guess_mimetype_extension
 from mmap import ACCESS_WRITE, mmap
 from os import PathLike, ftruncate
 from pathlib import Path
 from threading import Lock
 from typing import Any, Literal
-from urllib.parse import unquote, urlparse
 
 # Third-party imports
-from httpx import Client, HTTPError, HTTPStatusError, Limits, RemoteProtocolError
+from httpx import Client, HTTPStatusError, Limits
 from psutil import virtual_memory
 from rich.progress import BarColumn, DownloadColumn, Progress, SpinnerColumn, TextColumn, TimeRemainingColumn, TransferSpeedColumn
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 # Local imports
-from .exceptions import DownloadError, HashVerificationError, InsufficientSpaceError, InvalidArgumentError, OnlineRequestError
-from .functions import has_available_space, looks_like_a_ram_directory
+from .exceptions import DownloadError, HashVerificationError, InsufficientSpaceError, InvalidArgumentError
+from .functions import fetch_file_info, has_available_space, looks_like_a_ram_directory
 
 
 class ChunkBuffer:
@@ -273,60 +271,6 @@ class TurboDL:
             total_size -= current_chunk
 
         return ranges
-
-    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=6), reraise=True)
-    def _get_file_info(self, url: str) -> tuple[int, str, str] | tuple[None, None, None]:
-        """
-        Get information about the file to be downloaded.
-
-        This method sends a HEAD request to the provided URL and retrieves the file size, mimetype, and filename from the response headers.
-        It will retry the request up to 3 times if it fails.
-
-        Args:
-            url (str): The URL of the file to be downloaded.
-
-        Returns:
-            tuple[int, str, str] | tuple[None, None, None]: A tuple containing the file size in bytes, mimetype, and filename. If the information cannot be retrieved, returns None.
-
-        Raises:
-            OnlineRequestError: If the request fails due to an HTTP error.
-        """
-
-        try:
-            # Send a HEAD request to the URL to get the file information
-            r = self._client.head(url, headers=self._custom_headers, timeout=self._timeout)
-        except RemoteProtocolError:
-            # If the request fails due to a remote protocol error, return None
-            return (None, None, None)
-        except HTTPError as e:
-            # If the request fails due to an HTTP error, raise a OnlineRequestError
-            raise OnlineRequestError(f"An error occurred while getting file info: {str(e)}") from e
-
-        # Get the headers from the response
-        headers = r.headers
-
-        # Get the content length from the headers
-        content_length = int(headers.get("content-length", 0))
-
-        # Get the content type from the headers
-        content_type = headers.get("content-type", "application/octet-stream").split(";")[0].strip()
-
-        # Get the filename from the content disposition header
-        content_disposition = headers.get("content-disposition")
-        filename = None
-
-        if content_disposition:
-            if "filename*=" in content_disposition:
-                filename = content_disposition.split("filename*=")[-1].split("'")[-1]
-            elif "filename=" in content_disposition:
-                filename = content_disposition.split("filename=")[-1].strip("\"'")
-
-        if not filename:
-            # If filename is not found, use the URL path as the filename
-            filename = Path(unquote(urlparse(url).path)).name or f"unknown_file{guess_mimetype_extension(content_type) or ''}"
-
-        # Return the file information
-        return (content_length, content_type, filename)
 
     @retry(stop=stop_after_attempt(5), wait=wait_exponential(multiplier=2, min=1, max=10), reraise=True)
     def _download_chunk(self, url: str, start: int, end: int, progress: Progress, task_id: int) -> bytes:
@@ -618,19 +562,22 @@ class TurboDL:
             use_ram_buffer = not is_ram_directory
 
         # Get the file info from the URL
-        total_size, mimetype, suggested_filename = self._get_file_info(url)
+        file_info = fetch_file_info(url, self._client, self._custom_headers, self._timeout)
 
-        # Handle the case where the file size is not known
-        if (total_size, mimetype, suggested_filename) == (None, None, None):
-            has_unknown_size = True
+        # Handle the case where the file info is not available
+        if file_info is None:
+            has_unknown_info = True
             total_size = 0
-            mimetype = "application/octet-stream"
-            suggested_filename = "file"
+            # mimetype = "application/octet-stream"  # TODO: Use it?
+            suggested_filename = "unknown_file"
         else:
-            has_unknown_size = False
+            has_unknown_info = False
+            total_size = file_info["size"]
+            # mimetype = file_info["mimetype"]  # TODO: Use it?
+            suggested_filename = file_info["filename"]
 
         # Check if there is enough space to download the file
-        if not has_unknown_size and not has_available_space(output_path, total_size):
+        if not has_unknown_info and not has_available_space(output_path, total_size):
             raise InsufficientSpaceError(f'Not enough space to download {total_size} bytes to "{output_path.as_posix()}"')
 
         try:
@@ -649,7 +596,7 @@ class TurboDL:
                     counter += 1
 
             # Handle pre-allocation of space if requested
-            if not has_unknown_size:
+            if not has_unknown_info:
                 if pre_allocate_space and total_size > 0:
                     with Progress(
                         SpinnerColumn(spinner_name="dots", style="bold cyan"),
