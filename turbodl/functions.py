@@ -137,7 +137,7 @@ def looks_like_a_ram_directory(path: str | Path) -> bool:
     """
 
     # List of known RAM-backed filesystems
-    ram_filesystems = {"tmpfs", "devtmpfs"}
+    ram_filesystems = {"tmpfs", "ramfs", "devtmpfs"}
 
     # Get the filesystem type of the path
     filesystem_type = get_filesystem_type(path)
