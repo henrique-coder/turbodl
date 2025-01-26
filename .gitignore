@@ -7,12 +7,15 @@ __pycache__
 .ruff_cache
 .pytest_cache
 .mypy_cache
+.tox
 
 # Directories
-.debug
+htmlcov
 
 # Files
 dev.py
+.coverage
+coverage.xml
 
 # Extensions
 # ...
