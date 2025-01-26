@@ -12,7 +12,16 @@ from typing import Any, Literal
 # Third-party imports
 from httpx import Client, HTTPStatusError, Limits
 from psutil import virtual_memory
-from rich.progress import BarColumn, DownloadColumn, Progress, SpinnerColumn, TextColumn, TimeRemainingColumn, TransferSpeedColumn
+from rich.progress import (
+    BarColumn,
+    DownloadColumn,
+    Progress,
+    SpinnerColumn,
+    TextColumn,
+    TimeElapsedColumn,
+    TimeRemainingColumn,
+    TransferSpeedColumn,
+)
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 # Local imports
@@ -627,6 +636,7 @@ class TurboDL:
                 DownloadColumn(),
                 TransferSpeedColumn(),
                 TimeRemainingColumn(),
+                TimeElapsedColumn(),
                 TextColumn("[bold][progress.percentage]{task.percentage:>3.0f}%"),
                 TextColumn(
                     f"[bold white]({('with' if use_ram_buffer else 'without')} RAM buffer, writing to {('RAM' if is_ram_directory else 'DISK')})",

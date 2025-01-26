@@ -38,7 +38,7 @@ turbodl.download(
     url="https://example.com/file.txt",  # Your download URL
     output_path="path/to/file"  # The file/path to save the downloaded file to or leave it empty to save it to the current working directory
 )
-# >>> Downloading "file.txt" ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 25.2/25.2 MB 82.6 MB/s 0:00:00 100% (with RAM buffer, writing to DISK)
+# >>> Downloading "file.txt" ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 25.2/25.2 MB 82.6 MB/s 0:00:00 0:00:01 100% (with RAM buffer, writing to DISK)
 
 print(turbodl.output_path)  # The resolved and absolute path to the downloaded file
 # >>> absolute/path/to/file.txt
@@ -67,7 +67,7 @@ turbodl.download(
     expected_hash=None,
     hash_type="md5",
 )
-# >>> Downloading "file.txt" ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 25.2/25.2 MB 82.6 MB/s 0:00:00 100% (with RAM buffer, writing to DISK)
+# >>> Downloading "file.txt" ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 25.2/25.2 MB 82.6 MB/s 0:00:00 0:00:01 100% (with RAM buffer, writing to DISK)
 
 print(turbodl.output_path)  # The resolved and absolute path to the downloaded file
 # >>> absolute/path/to/file.txt
@@ -127,7 +127,7 @@ turbodl download --help
 # >>> ╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
 
 turbodl download [...] https://example.com/file.txt path/to/file
-# >>> Downloading "file.txt" ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 25.2/25.2 MB 82.6 MB/s 0:00:00 100% (with RAM buffer, writing to DISK)
+# >>> Downloading "file.txt" ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 25.2/25.2 MB 82.6 MB/s 0:00:00 0:00:01 100% (with RAM buffer, writing to DISK)
 ```
 
 ### Contributing
