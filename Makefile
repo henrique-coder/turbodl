@@ -18,9 +18,20 @@ install:
 	poetry install
 
 clean:
-	rm -rf .mypy_cache .pytest_cache .ruff_cache
+	rm -rf .mypy_cache .pytest_cache .ruff_cache .tox
+	rm -rf .coverage coverage.xml
+	rm -rf dist build
+	rm -rf *.egg-info
+	rm -rf .eggs
+	rm -rf .pytest_cache
+	rm -rf .hypothesis
+	rm -rf pip-wheel-metadata
 	find . -type d -name "__pycache__" -exec rm -rf {} +
 	find . -type f -name "*.pyc" -delete
+	find . -type f -name "*.pyo" -delete
+	find . -type f -name "*.pyd" -delete
+	find . -type f -name ".coverage.*" -delete
+	find . -type f -name "*.so" -delete
 
 check: typecheck lint test
 
