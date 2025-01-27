@@ -2,7 +2,7 @@ name: CI Tests for Pull Requests
 
 on:
   pull_request:
-    branches: ["main"]
+    branches: ["main", "dev"]
 
 permissions:
   contents: read
@@ -38,21 +38,22 @@ jobs:
       - name: 🔧 Install Poetry
         run: |
           python -m pip install --upgrade pip
-          pip install poetry
+          pip install --upgrade poetry
 
       - name: 📚 Install Dependencies
         run: poetry install --with test
 
-      - name: 🧪 Run Tests
-        run: poetry run pytest -v
+      - name: 🧪 Run Tests via Makefile
+        run: make tests
 
       - name: 📝 Report Test Status
         if: always()
         uses: actions/github-script@v7
         with:
           script: |
+            const targetBranch = context.payload.pull_request.base.ref;
             const conclusion = '${{ job.status }}' === 'success' ? '✅ All tests passed' : '❌ Some tests failed';
-            const message = `## Test Results\n\n${conclusion}\n\nSee detailed results in the [Actions tab](${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID})`;
+            const message = `## Test Results for ${targetBranch}\n\n${conclusion}\n\nSee detailed results in the [Actions tab](${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID})`;
 
             await github.rest.issues.createComment({
               issue_number: context.issue.number,
