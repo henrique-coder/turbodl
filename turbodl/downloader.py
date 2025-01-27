@@ -122,7 +122,6 @@ class TurboDL:
         connection_speed: float = 80,
         show_progress_bars: bool = True,
         custom_headers: dict[str, Any] | None = None,
-        timeout: int | None = None,
     ) -> None:
         """
         Initialize the class with the required settings for downloading a file.
@@ -140,7 +139,6 @@ class TurboDL:
                     - 'Range': ...
                     - 'Connection': ...
                 - All other headers will be included in the request.
-            timeout (int | None): Timeout in seconds for the download process. Or None for no timeout. Default to None.
 
         Raises:
             InvalidArgumentError: If max_connections is not 'auto' or an integer between 1 and 32, or if connection_speed is not positive.
@@ -153,7 +151,6 @@ class TurboDL:
         self._max_connections: int | str | Literal["auto"] = max_connections
         self._connection_speed: float = connection_speed
         self._show_progress_bars: bool = show_progress_bars
-        self._timeout: int | None = timeout
 
         # Create a dictionary with default headers and update it with custom headers
         self._custom_headers: dict[str, Any] = {
@@ -183,7 +180,6 @@ class TurboDL:
             follow_redirects=True,
             verify=True,
             limits=Limits(max_connections=48, max_keepalive_connections=24, keepalive_expiry=10),
-            timeout=self._timeout,
         )
 
         # Initialize the output path to None
@@ -462,6 +458,7 @@ class TurboDL:
         pre_allocate_space: bool = False,
         use_ram_buffer: bool | Literal["auto"] = "auto",
         overwrite: bool = True,
+        timeout: int | None = None,
         expected_hash: str | None = None,
         hash_type: Literal[
             "md5",
@@ -489,6 +486,7 @@ class TurboDL:
             pre_allocate_space (bool): Whether to pre-allocate space for the file, useful to avoid disk fragmentation. Defaults to False.
             use_ram_buffer (bool | str | Literal["auto"]): Whether to use a RAM buffer to download the file. If True, the file will be downloaded with the help of a RAM buffer. If False, the file will be downloaded directly to the output file path. If 'auto', the RAM buffer will be used if the output path is not a RAM directory. Defaults to 'auto'.
             overwrite (bool): Overwrite the file if it already exists. Otherwise, a '_1', '_2', etc. suffix will be added. Defaults to True.
+            timeout (int | None): Timeout in seconds for the download process. Or None for no timeout. Default to None.
             expected_hash (str | None): The expected hash of the downloaded file. If not provided, the hash will not be checked. Defaults to None.
             hash_type (str | Literal['md5', 'sha1', 'sha224', 'sha256', 'sha384', 'sha512', 'blake2b', 'blake2s', 'sha3_224', 'sha3_256', 'sha3_384', 'sha3_512', 'shake_128', 'shake_256']): The hash type to use for the hash verification. Defaults to 'md5'.
 
@@ -499,6 +497,9 @@ class TurboDL:
             InsufficientSpaceError: If there is not enough space to download the file.
             OnlineRequestError: If an error occurs while getting file info.
         """
+
+        # Set the timeout
+        self._client.timeout = timeout
 
         # Check if the URL is provided
         if not url:
@@ -519,7 +520,7 @@ class TurboDL:
             use_ram_buffer = not is_ram_directory
 
         # Get the file info from the URL
-        file_info = fetch_file_info(url, self._client, self._custom_headers, self._timeout)
+        file_info = fetch_file_info(url, self._client, self._custom_headers)
 
         # Handle the case where the file info is not available
         if file_info is None:
