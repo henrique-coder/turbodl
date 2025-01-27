@@ -4,7 +4,7 @@ on:
   push:
     branches: ["main"]
     paths:
-      - 'CHANGELOG.md'
+      - "CHANGELOG.md"
 
 permissions:
   contents: write
@@ -48,7 +48,7 @@ jobs:
           VERSION=$(grep -oP '## \[\K[^\]]+' CHANGELOG.md | head -n1)
           EXTRA_TEXT=$(grep -oP '## \[[^\]]+\] - \(\K[^\)]+' CHANGELOG.md | head -n1)
 
-          CHANGES=$(awk '/## \['$VERSION'\]/{flag=1;next}/## \[/{flag=0}flag' CHANGELOG.md | sed 's/####/\n####/g' | sed '1d')
+          CHANGES=$(awk '/## \['$VERSION'\]/{flag=1;next}/## \[/{flag=0}flag' CHANGELOG.md | sed 's/####/\n####/g' | sed '1d' | sed 's/^- /\n- /g')
 
           echo "Version detected: $VERSION"
           echo "Extra text: $EXTRA_TEXT"
@@ -88,6 +88,15 @@ jobs:
           COMMITS=$(git log --reverse --pretty=format:"- [%s](https://github.com/${{ github.repository }}/commit/%H)" ${{ steps.previoustag.outputs.tag }}..HEAD || echo "- No significant changes in this release")
           echo "commits<<EOF" >> $GITHUB_OUTPUT
           echo "$COMMITS" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: 📝 Generate Contributors List
+        if: steps.check_version.outputs.should_continue == 'true'
+        id: contributors_list
+        run: |
+          CONTRIBUTORS=$(git log --reverse --format="- [@%aN](https://github.com/%aN)" ${{ steps.previoustag.outputs.tag }}..HEAD | sort -u)
+          echo "contributors<<EOF" >> $GITHUB_OUTPUT
+          echo "$CONTRIBUTORS" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
       - name: 🐍 Setup Python
@@ -138,9 +147,15 @@ jobs:
 
             ${{ steps.commit_list.outputs.commits }}
 
+            ### 👥 Contributors:
+
+            Thank you to all contributors for this release:
+
+            ${{ steps.contributors_list.outputs.contributors }}
+
             ### 📊 Compare Changes
 
-            [View all changes](https://github.com/${{ github.repository }}/compare/${{ steps.previoustag.outputs.tag }}...v${{ steps.version_info.outputs.version }})
+            [View all changes](https://github.com/${{ github.repository }}/compare/${{ steps.previoustag.outputs.tag }}..v${{ steps.version_info.outputs.version }})
           draft: false
           prerelease: false
           files: |
