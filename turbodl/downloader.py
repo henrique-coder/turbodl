@@ -2,7 +2,6 @@
 from concurrent.futures import ThreadPoolExecutor
 from hashlib import new as hashlib_new
 from io import BytesIO
-from math import ceil, log2, sqrt
 from mmap import ACCESS_WRITE, mmap
 from os import PathLike, ftruncate
 from pathlib import Path
@@ -17,17 +16,17 @@ from rich.progress import (
     DownloadColumn,
     Progress,
     SpinnerColumn,
+    TaskID,
     TextColumn,
     TimeElapsedColumn,
     TimeRemainingColumn,
     TransferSpeedColumn,
-    TaskID,
 )
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 # Local imports
 from .exceptions import DownloadError, HashVerificationError, InsufficientSpaceError, InvalidArgumentError
-from .functions import fetch_file_info, has_available_space, looks_like_a_ram_directory
+from .functions import fetch_file_info, get_chunk_ranges, has_available_space, looks_like_a_ram_directory
 
 
 class ChunkBuffer:
@@ -118,7 +117,7 @@ class TurboDL:
 
     def __init__(
         self,
-        max_connections: int | Literal["auto"] = "auto",
+        max_connections: int | str | Literal["auto"] = "auto",
         connection_speed: float = 80,
         show_progress_bars: bool = True,
         custom_headers: dict[str, Any] | None = None,
@@ -147,7 +146,7 @@ class TurboDL:
         """
 
         # Initialize the instance variables
-        self._max_connections: int | Literal["auto"] = max_connections
+        self._max_connections: int | str | Literal["auto"] = max_connections
         self._connection_speed: float = connection_speed
 
         # Validate the arguments
@@ -188,99 +187,6 @@ class TurboDL:
 
         # Initialize the output path to None
         self.output_path: str | None = None
-
-    def _calculate_connections(self, file_size: int, connection_speed: float) -> int:
-        """
-        Calculate the optimal number of connections based on file size and connection speed.
-
-        This method uses a sophisticated formula that considers:
-        - Logarithmic scaling of file size
-        - Square root scaling of connection speed
-        - System resource optimization
-        - Network overhead management
-
-        Formula:
-        conn = β * log2(1 + S / M) * sqrt(V / 100)
-
-        Where:
-        - S: File size in MB
-        - V: Connection speed in Mbps
-        - M: Base size factor (1 MB)
-        - β: Dynamic coefficient (5.6)
-
-        Args:
-            file_size (int): The size of the file in bytes.
-            connection_speed (float): Your connection speed in Mbps.
-
-        Returns:
-            int: The estimated optimal number of connections, capped between 2 and 24.
-        """
-
-        # Convert file size from bytes to megabytes
-        file_size_mb = file_size / (1024 * 1024)
-
-        # Use default connection speed if set to 'auto'
-        speed = 80.0 if connection_speed == "auto" else float(connection_speed)
-
-        # Dynamic coefficient for connection calculation
-        beta = 5.6
-
-        # Base size factor in MB
-        base_size = 1.0
-
-        # Calculate the number of connections using the formula
-        conn_float = beta * log2(1 + file_size_mb / base_size) * sqrt(speed / 100)
-
-        # Ensure the number of connections is within the allowed range
-        return max(2, min(24, ceil(conn_float)))
-
-    def _get_chunk_ranges(self, total_size: int) -> list[tuple[int, int]]:
-        """
-        Calculate the optimal chunk ranges for downloading a file.
-
-        This method divides the total file size into optimal chunks based on the number of connections.
-        It returns a list of tuples, where each tuple contains the start and end byte indices for a chunk.
-
-        Args:
-            total_size (int): The total size of the file in bytes.
-
-        Returns:
-            list[tuple[int, int]]: A list of tuples containing the start and end indices of each chunk.
-        """
-
-        # If the total size is zero, return a single range starting and ending at 0
-        if total_size is None:
-            return [(0, 0)]
-
-        # Calculate the number of connections to use for the download
-        if self._max_connections == "auto":
-            self._max_connections = self._calculate_connections(total_size, self._connection_speed)
-        self._max_connections = int(self._max_connections)
-
-        # Calculate the size of each chunk
-        chunk_size = ceil(total_size / self._max_connections)
-
-        ranges = []
-        start = 0
-
-        # Create ranges for each chunk
-        while total_size > 0:
-            # Determine the size of the current chunk
-            current_chunk = min(chunk_size, total_size)
-
-            # Calculate the end index of the current chunk
-            end = start + current_chunk - 1
-
-            # Append the start and end indices as a tuple to the ranges list
-            ranges.append((start, end))
-
-            # Move the start index to the next chunk
-            start = end + 1
-
-            # Reduce the total size by the size of the current chunk
-            total_size -= current_chunk
-
-        return ranges
 
     @retry(stop=stop_after_attempt(5), wait=wait_exponential(multiplier=2, min=1, max=10), reraise=True)
     def _download_chunk(self, url: str, start: int, end: int, progress: Progress, task_id: int) -> bytes:
@@ -428,7 +334,7 @@ class TurboDL:
                 raise DownloadError(msg) from e
 
         # Get the chunk ranges
-        ranges = self._get_chunk_ranges(total_size)
+        ranges = get_chunk_ranges(total_size, self._max_connections, self._connection_speed)
 
         # Initialize buffers and write positions
         chunk_buffers: dict[int, ChunkBuffer] = {}
@@ -506,11 +412,10 @@ class TurboDL:
                         progress.update(TaskID(task_id), advance=chunk_len)
             except Exception as e:
                 # Raise a DownloadError if any exception occurs during download
-                msg = f"An error occurred while downloading chunk: {e}"
-                raise DownloadError(msg) from e
+                raise DownloadError(f"An error occurred while downloading chunk: {e}") from e
 
         # Get the chunk ranges for the download
-        ranges = self._get_chunk_ranges(total_size)
+        ranges = get_chunk_ranges(total_size, self._max_connections, self._connection_speed)
 
         # Use ThreadPoolExecutor to download chunks concurrently
         with ThreadPoolExecutor(max_workers=len(ranges)) as executor:

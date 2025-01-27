@@ -1,8 +1,9 @@
 # Built-in imports
+from math import ceil, log2, sqrt
 from mimetypes import guess_extension as guess_mimetype_extension
 from os import PathLike
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 from urllib.parse import unquote, urlparse
 
 # Third-party imports
@@ -12,6 +13,49 @@ from tenacity import retry, stop_after_attempt, wait_exponential
 
 # Local imports
 from .exceptions import OnlineRequestError
+
+
+def calculate_connections(file_size: int, connection_speed: float) -> int:
+    """
+    Calculate the optimal number of connections based on file size and connection speed.
+
+    This method uses a sophisticated formula that considers:
+    - Logarithmic scaling of file size
+    - Square root scaling of connection speed
+    - System resource optimization
+    - Network overhead management
+
+    Formula:
+    conn = β * log2(1 + S / M) * sqrt(V / 100)
+
+    Where:
+    - S: File size in MB
+    - V: Connection speed in Mbps
+    - M: Base size factor (1 MB)
+    - β: Dynamic coefficient (5.6)
+
+    Args:
+        file_size (int): The size of the file in bytes.
+        connection_speed (float): Your connection speed in Mbps.
+
+    Returns:
+        int: The estimated optimal number of connections, capped between 2 and 24.
+    """
+
+    # Convert file size from bytes to megabytes
+    file_size_mb = file_size / (1024 * 1024)
+
+    # Dynamic coefficient for connection calculation
+    beta = 5.6
+
+    # Base size factor in MB
+    base_size = 1.0
+
+    # Calculate the number of connections using the formula
+    conn_float = beta * log2(1 + file_size_mb / base_size) * sqrt(connection_speed / 100)
+
+    # Ensure the number of connections is within the allowed range
+    return max(2, min(24, ceil(conn_float)))
 
 
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=6), reraise=True)
@@ -72,6 +116,60 @@ def fetch_file_info(
 
     # Return the file information
     return {"size": content_length, "mimetype": content_type, "filename": filename}
+
+
+def get_chunk_ranges(
+    total_size: int, max_connections: int | str | Literal["auto"], connection_speed: float
+) -> list[tuple[int, int]]:
+    """
+    Calculate the optimal chunk ranges for downloading a file.
+
+    This method divides the total file size into optimal chunks based on the number of connections.
+    It returns a list of tuples, where each tuple contains the start and end byte indices for a chunk.
+
+    Args:
+        total_size (int): The total size of the file in bytes.
+        max_connections (int | str | Literal["auto"]): The maximum number of connections to use for the download.
+        connection_speed (float): Your connection speed in Mbps.
+
+    Returns:
+        list[tuple[int, int]]: A list of tuples containing the start and end indices of each chunk.
+    """
+
+    # If the total size is 0, return a single range starting and ending at 0
+    if total_size == 0:
+        return [(0, 0)]
+
+    # Calculate the number of connections to use for the download
+    if max_connections == "auto":
+        max_connections = calculate_connections(total_size, connection_speed)
+
+    max_connections = int(max_connections)
+
+    # Calculate the size of each chunk
+    chunk_size = ceil(total_size / max_connections)
+
+    ranges = []
+    start = 0
+
+    # Create ranges for each chunk
+    while total_size > 0:
+        # Determine the size of the current chunk
+        current_chunk = min(chunk_size, total_size)
+
+        # Calculate the end index of the current chunk
+        end = start + current_chunk - 1
+
+        # Append the start and end indices as a tuple to the ranges list
+        ranges.append((start, end))
+
+        # Move the start index to the next chunk
+        start = end + 1
+
+        # Reduce the total size by the size of the current chunk
+        total_size -= current_chunk
+
+    return ranges
 
 
 def get_filesystem_type(path: str | Path) -> str | None:
