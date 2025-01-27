@@ -1,21 +1,43 @@
-.PHONY: typecheck test lint format install clean check help
+PYTHON ?= python3
+VENV := .venv
+
+.PHONY: setup-venv tests lint format install clean check help
 .DEFAULT_GOAL := help
 
-typecheck:
-	poetry run mypy turbodl --exclude '__pycache__'
+help:
+	@echo "Available commands:"
+	@echo "  setup-venv  - Create a virtual environment"
+	@echo "  install     - Update dependencies, poetry.lock file, and install project"
+	@echo "  update      - Update dependencies and poetry.lock file"
+	@echo "  lint        - Check code with ruff"
+	@echo "  format      - Format code with ruff"
+	@echo "  tests       - Run tests with pytest"
+	@echo "  clean       - Remove cache and temporary files"
+	@echo "  help        - Show this help message"
 
-test:
-	poetry run pytest
-
-lint:
-	poetry run ruff check turbodl
-
-format:
-	poetry run ruff format turbodl
+setup-venv:
+	@echo "Creating virtual environment..."
+	@test -d $(VENV) || $(PYTHON) -m venv $(VENV)
+	@$(VENV)/bin/pip install -U pip
+	@$(VENV)/bin/pip install -U poetry
+	@touch $(VENV)
+	@echo "Virtual environment created at $(VENV) with Poetry installed"
 
 install:
 	poetry lock
 	poetry install
+
+update:
+	poetry update
+
+lint:
+	poetry run ruff check
+
+format:
+	poetry run ruff format
+
+tests:
+	poetry run pytest -v
 
 clean:
 	rm -rf .mypy_cache .pytest_cache .ruff_cache .tox
@@ -32,15 +54,3 @@ clean:
 	find . -type f -name "*.pyd" -delete
 	find . -type f -name ".coverage.*" -delete
 	find . -type f -name "*.so" -delete
-
-check: typecheck lint test
-
-help:
-	@echo "Available commands:"
-	@echo "  typecheck  - Run type checking with mypy"
-	@echo "  test       - Run tests with pytest"
-	@echo "  lint       - Check code with ruff"
-	@echo "  format     - Format code with ruff"
-	@echo "  install    - Update poetry.lock and install dependencies"
-	@echo "  clean      - Remove cache and temporary files"
-	@echo "  check      - Run typecheck, lint and test"
