@@ -11,22 +11,21 @@ from typing import Any, Literal
 # Third-party imports
 from httpx import Client, HTTPStatusError, Limits
 from psutil import virtual_memory
-from rich.progress import (
-    BarColumn,
-    DownloadColumn,
-    Progress,
-    SpinnerColumn,
-    TaskID,
-    TextColumn,
-    TimeElapsedColumn,
-    TimeRemainingColumn,
-    TransferSpeedColumn,
-)
+from rich.console import Console
+from rich.progress import BarColumn, DownloadColumn, Progress, SpinnerColumn, TaskID, TextColumn, TransferSpeedColumn
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 # Local imports
 from .exceptions import DownloadError, HashVerificationError, InsufficientSpaceError, InvalidArgumentError
-from .functions import fetch_file_info, get_chunk_ranges, has_available_space, looks_like_a_ram_directory
+from .functions import (
+    CustomTimeColumn,
+    bool_to_yes_no,
+    fetch_file_info,
+    format_size,
+    get_chunk_ranges,
+    has_available_space,
+    looks_like_a_ram_directory,
+)
 
 
 class ChunkBuffer:
@@ -145,9 +144,21 @@ class TurboDL:
             InvalidArgumentError: If max_connections is not 'auto' or an integer between 1 and 32, or if connection_speed is not positive.
         """
 
+        # Initialize the console
+        self._console = Console()
+
         # Initialize the instance variables
         self._max_connections: int | str | Literal["auto"] = max_connections
         self._connection_speed: float = connection_speed
+        self._show_progress_bars: bool = show_progress_bars
+        self._timeout: int | None = timeout
+
+        # Create a dictionary with default headers and update it with custom headers
+        self._custom_headers: dict[str, Any] = {
+            "Accept": "*/*",
+            "Accept-Encoding": "identity",
+            "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36",
+        }
 
         # Validate the arguments
         if isinstance(self._max_connections, str) and self._max_connections.isdigit():
@@ -158,16 +169,6 @@ class TurboDL:
 
         if self._connection_speed <= 0:
             raise InvalidArgumentError(f"connection_speed must be positive: {self._connection_speed}")
-
-        self._show_progress_bars: bool = show_progress_bars
-        self._timeout: int | None = timeout
-
-        # Create a dictionary with default headers and update it with custom headers
-        self._custom_headers: dict[str, Any] = {
-            "Accept": "*/*",
-            "Accept-Encoding": "identity",
-            "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36",
-        }
 
         if custom_headers:
             for key, value in custom_headers.items():
@@ -534,6 +535,8 @@ class TurboDL:
         if not has_unknown_info and not has_available_space(output_path, total_size):
             raise InsufficientSpaceError(f"Not enough space to download {total_size} bytes to '{output_path.as_posix()}'")
 
+        self._console.line()
+
         try:
             # If output path is a directory, append suggested filename
             if output_path.is_dir():
@@ -571,19 +574,25 @@ class TurboDL:
             # Set the output path
             self.output_path = output_path.as_posix()
 
-            # Set up the progress columns for display
+            # Set up status message
+            self._console.print(
+                f"[bold bright_black]╭ [green]Downloading [blue]{url} [bright_black]• [green]{format_size(total_size)}"
+            )
+            self._console.print(
+                f"[bold bright_black]│ [green]Output file: [cyan]{self.output_path} [bright_black]• [green]RAM dir: [cyan]{bool_to_yes_no(is_ram_directory)} [bright_black]• [green]RAM buffer: [cyan]{bool_to_yes_no(use_ram_buffer)} [bright_black]• [green]Connection speed: [cyan]{self._connection_speed} Mbps"
+            )
+
+            # Set up live progress bar
             progress_columns = [
-                TextColumn(f'Downloading "{suggested_filename}"', style="bold magenta"),
+                TextColumn("[bold bright_black]╰─◾"),  # ⯀ ◾ ▪
                 BarColumn(style="bold white", complete_style="bold red", finished_style="bold green"),
+                TextColumn("[bold bright_black]•"),
                 DownloadColumn(),
+                TextColumn("[bold bright_black]• [not bold][magenta][progress.percentage]{task.percentage:>3.0f}%"),
+                TextColumn("[bold bright_black]•"),
                 TransferSpeedColumn(),
-                TimeRemainingColumn(),
-                TimeElapsedColumn(),
-                TextColumn("[bold][progress.percentage]{task.percentage:>3.0f}%"),
-                TextColumn(
-                    f"[bold white]({('with' if use_ram_buffer else 'without')} RAM buffer, writing to {('RAM' if is_ram_directory else 'DISK')})",
-                    justify="right",
-                ),
+                TextColumn("[bold bright_black]•"),
+                CustomTimeColumn(elapsed_style="steel_blue", remaining_style="white"),
             ]
 
             # Perform the download
@@ -605,6 +614,8 @@ class TurboDL:
         except Exception as e:
             # Handle any other download exceptions
             raise DownloadError(f"An error occurred while downloading file: {e}") from e
+
+        self._console.line()
 
         # Verify the hash of the downloaded file if an expected hash is provided
         if expected_hash is not None:
