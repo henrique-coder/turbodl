@@ -38,7 +38,7 @@ def test_invalid_url(downloader: TurboDL, temporary_path: Path) -> None:
     """
     Test download with invalid URL.
     """
-    
+
     url: str = "https://invalid-url-that-does-not-exist.com/file.zip"
 
     with raises(TurboDLError):
