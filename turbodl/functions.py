@@ -289,9 +289,7 @@ def calculate_connections(file_size: int, connection_speed: float) -> int:
 
 
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=6), reraise=True)
-def fetch_file_info(
-    url: str, httpx_client: Client, headers: dict[str, Any], timeout: int | None = None
-) -> dict[str, str | int] | None:
+def fetch_file_info(url: str, httpx_client: Client, headers: dict[str, Any]) -> dict[str, str | int] | None:
     """
     Get information about the file to be downloaded.
 
@@ -302,7 +300,6 @@ def fetch_file_info(
         url (str): The URL of the file to be downloaded.
         httpx_client (Client): The HTTPX client to use for the request.
         headers (dict[str, Any]): The headers to include in the request.
-        timeout (int | None): The timeout in seconds for the request. Or None for no timeout. Default to None.
 
     Returns:
         dict[str, str | int] | None: A dictionary containing the file size, mimetype, and filename, or None if the request fails.
@@ -313,7 +310,7 @@ def fetch_file_info(
 
     try:
         # Send a HEAD request to the URL to get the file information
-        r = httpx_client.head(url, headers=headers, timeout=timeout)
+        r = httpx_client.head(url, headers=headers)
     except RemoteProtocolError:
         # If the request fails due to a remote protocol error, return None
         return None
