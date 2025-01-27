@@ -11,6 +11,7 @@ __pycache__
 
 # Directories
 htmlcov
+coverage_html
 
 # Files
 dev.py
