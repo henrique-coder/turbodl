@@ -40,7 +40,7 @@ turbodl.download(
 )
 # >>> Downloading "file.txt" ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 25.2/25.2 MB 82.6 MB/s 0:00:00 0:00:01 100% (with RAM buffer, writing to DISK)
 
-print(turbodl.output_path)  # The resolved and absolute path to the downloaded file
+print(turbodl.output_path)  # The absolute path to the downloaded file
 # >>> absolute/path/to/file.txt
 
 ```
@@ -69,7 +69,7 @@ turbodl.download(
 )
 # >>> Downloading "file.txt" ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 25.2/25.2 MB 82.6 MB/s 0:00:00 0:00:01 100% (with RAM buffer, writing to DISK)
 
-print(turbodl.output_path)  # The resolved and absolute path to the downloaded file
+print(turbodl.output_path)  # The absolute path to the downloaded file
 # >>> absolute/path/to/file.txt
 
 ```
@@ -77,54 +77,8 @@ print(turbodl.output_path)  # The resolved and absolute path to the downloaded f
 #### From the command line
 
 ```bash
-turbodl --help
-# >>>  Usage: turbodl [OPTIONS] COMMAND [ARGS]...
-# >>>
-# >>>  TurboDL is an extremely smart, fast, and efficient download manager with several automations.
-# >>>
-# >>>  Examples:
-# >>>     Download a file:
-# >>>     $ turbodl download https://example.com/file.zip
-# >>>
-# >>>     Download a file to a specific path:
-# >>>     $ turbodl download https://example.com/file.zip /path/to/file
-# >>>
-# >>>  More Help:
-# >>>     For detailed download options, use:
-# >>>     $ turbodl download --help
-# >>>
-# >>> ╭─ Options ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
-# >>> │ --version  -v        Show version and exit.                                                                                                                                                                             │
-# >>> │ --help     -h        Show this message and exit.                                                                                                                                                                        │
-# >>> ╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
-# >>> ╭─ Commands ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
-# >>> │ check      Check for available updates.                                                                                                                                                                                 │
-# >>> │ download   Download a file from the provided URL to the specified output path (with a lot of options)                                                                                                                   │
-# >>> ╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
-
-turbodl download --help
-# >>>  Usage: turbodl download [OPTIONS] URL [OUTPUT_PATH]
-# >>>
-# >>>  Download a file from the provided URL to the specified output path (with a lot of options)
-# >>>
-# >>> ╭─ Arguments ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
-# >>> │ *    url              TEXT           Download URL. [default: None] [required]                                                                                                                                           │
-# >>> │      output_path      [OUTPUT_PATH]  Destination path. If directory, filename is derived from server response. [default: (Current directory)]                                                                           │
-# >>> ╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
-# >>> ╭─ Options ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
-# >>> │ --max-connections     -mc       TEXT     Max connections: 'auto' or integer (1-24). [default: auto]                                                                                                                     │
-# >>> │ --connection-speed    -cs       FLOAT    Connection speed in Mbps for optimal connections. [default: 80]                                                                                                                │
-# >>> │ --hide-progress-bars  -hpb               Hide progress bars (shown by default).                                                                                                                                         │
-# >>> │ --pre-allocate-space  -pas               Pre-allocate disk space before downloading.                                                                                                                                    │
-# >>> │ --auto-ram-buffer     -arb               Use RAM buffer automatically if path isn't RAM dir (default).                                                                                                                  │
-# >>> │ --use-ram-buffer      -urb               Always use RAM buffer.                                                                                                                                                         │
-# >>> │ --no-ram-buffer       -nrb               Never use RAM buffer.                                                                                                                                                          │
-# >>> │ --no-overwrite        -no                Don't overwrite existing files (overwrite by default).                                                                                                                         │
-# >>> │ --timeout             -t        INTEGER  Download timeout in seconds. [default: None]                                                                                                                                   │
-# >>> │ --expected-hash       -eh       TEXT     Expected file hash for verification. [default: None]                                                                                                                           │
-# >>> │ --hash-type           -ht       TEXT     Hash algorithm for verification. [default: md5]                                                                                                                                │
-# >>> │ --help                -h                 Show this message and exit.                                                                                                                                                    │
-# >>> ╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+turbodl --help  # Show help for all commands
+turbodl download --help  # Show help for the download command
 
 turbodl download [...] https://example.com/file.txt path/to/file
 # >>> Downloading "file.txt" ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 25.2/25.2 MB 82.6 MB/s 0:00:00 0:00:01 100% (with RAM buffer, writing to DISK)
