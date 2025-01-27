@@ -2,11 +2,36 @@
 from pathlib import Path
 
 # Third-party imports
-from pytest import raises
+from pytest import mark, raises
 
 # Local imports
 from turbodl import TurboDL
 from turbodl.exceptions import TurboDLError
+
+
+TEST_FILES = [
+    {
+        "name": "5mb_file",
+        "url": "http://212.183.159.230/5MB.zip",
+        "expected_filename": "5MB.zip",
+        "expected_hash": "b3215c06647bc550406a9c8ccc378756",
+        "hash_type": "md5",
+    },
+    {
+        "name": "35mb_file",
+        "url": "https://files.testfile.org/Video MP4/River - testfile.org.mp4",
+        "expected_filename": "River - testfile.org.mp4",
+        "expected_hash": "ac6ee07c343c36d0d0dbc65907252b2e",
+        "hash_type": "md5",
+    },
+    {
+        "name": "150mb_file",
+        "url": "https://files.testfile.org/ZIPC/150MB-Corrupt-Testfile.Org.zip",
+        "expected_filename": "150MB-Corrupt-Testfile.Org.zip",
+        "expected_hash": "b69f227f41579ba3594414dce1426f36",
+        "hash_type": "md5",
+    },
+]
 
 
 def test_invalid_url(downloader: TurboDL, temporary_path: Path) -> None:
@@ -20,50 +45,23 @@ def test_invalid_url(downloader: TurboDL, temporary_path: Path) -> None:
         downloader.download(url=url, output_path=temporary_path)
 
 
-def test_download_5mb_file(downloader: TurboDL, temporary_path: Path) -> None:
+@mark.parametrize("file_info", TEST_FILES, ids=lambda x: x["name"])
+def test_download_file(downloader: TurboDL, temporary_path: Path, file_info: dict) -> None:
     """
-    Test download of a 5MB file.
+    Test file download with different sizes.
     """
 
-    url: str = "http://212.183.159.230/5MB.zip"
-    expected_filename: str = "5MB.zip"
-    expected_hash: str = "b3215c06647bc550406a9c8ccc378756"
-    hash_type: str = "md5"
-
-    downloader.download(url=url, output_path=temporary_path, expected_hash=expected_hash, hash_type=hash_type)
+    downloader.download(
+        url=file_info["url"],
+        output_path=temporary_path,
+        expected_hash=file_info["expected_hash"],
+        hash_type=file_info["hash_type"],
+    )
     output_path = Path(downloader.output_path)
 
-    assert output_path.name == expected_filename, f"URL: {url} - Output file name: {output_path.name} - Expected filename: {expected_filename} - Error: Downloaded file name is different than expected"
-
-
-def test_download_35mb_file(downloader: TurboDL, temporary_path: Path) -> None:
-    """
-    Test download of a 35MB file.
-    """
-
-    url: str = "https://files.testfile.org/Video MP4/River - testfile.org.mp4"
-    expected_filename: str = "River - testfile.org.mp4"
-    expected_hash: str = "ac6ee07c343c36d0d0dbc65907252b2e"
-    hash_type: str = "md5"
-
-    downloader.download(url=url, output_path=temporary_path, expected_hash=expected_hash, hash_type=hash_type)
-    output_path = Path(downloader.output_path)
-
-    assert output_path.name == expected_filename, f"URL: {url} - Output file name: {output_path.name} - Expected filename: {expected_filename} - Error: Downloaded file name is different than expected"
-
-
-
-def test_download_150mb_file(downloader: TurboDL, temporary_path: Path) -> None:
-    """
-    Test download of a 150MB file.
-    """
-
-    url: str = "https://files.testfile.org/ZIPC/150MB-Corrupt-Testfile.Org.zip"
-    expected_filename: str = "150MB-Corrupt-Testfile.Org.zip"
-    expected_hash: str = "b69f227f41579ba3594414dce1426f36"
-    hash_type: str = "md5"
-
-    downloader.download(url=url, output_path=temporary_path, expected_hash=expected_hash, hash_type=hash_type)
-    output_path = Path(downloader.output_path)
-
-    assert output_path.name == expected_filename, f"URL: {url} - Output file name: {output_path.name} - Expected filename: {expected_filename} - Error: Downloaded file name is different than expected"
+    assert output_path.name == file_info["expected_filename"], (
+        f"URL: {file_info['url']} - "
+        f"Output file name: {output_path.name} - "
+        f"Expected filename: {file_info['expected_filename']} - "
+        f"Error: Downloaded file name is different than expected"
+    )
