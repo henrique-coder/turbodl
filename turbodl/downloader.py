@@ -621,4 +621,6 @@ class TurboDL:
                 Path(output_path).unlink(missing_ok=True)
                 self.output_path = None
 
-                raise HashVerificationError(f'Hash verification failed. Hash type: "{hash_type}" - Actual hash: "{file_hash}" - Expected hash: "{expected_hash}"')
+                raise HashVerificationError(
+                    f'Hash verification failed. Hash type: "{hash_type}" - Actual hash: "{file_hash}" - Expected hash: "{expected_hash}"'
+                )
