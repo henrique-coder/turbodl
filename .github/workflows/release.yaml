@@ -61,6 +61,19 @@ jobs:
           echo "$CHANGES" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
+      - name: 🔍 Check Version Change
+        id: check_version
+        run: |
+          PREV_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+          CURRENT_VERSION="v${{ steps.version_info.outputs.version }}"
+
+          if [ "$PREV_TAG" == "$CURRENT_VERSION" ]; then
+            echo "Version $CURRENT_VERSION already released, skipping..."
+            exit 1
+          fi
+
+          echo "New version detected: $CURRENT_VERSION (previous was $PREV_TAG)"
+
       - name: 🏷️ Get Previous Tag
         id: previoustag
         run: |
