@@ -21,6 +21,7 @@ from rich.progress import (
     TimeElapsedColumn,
     TimeRemainingColumn,
     TransferSpeedColumn,
+    TaskID
 )
 from tenacity import retry, stop_after_attempt, wait_exponential
 
@@ -188,7 +189,7 @@ class TurboDL:
         # Initialize the output path to None
         self.output_path: str | None = None
 
-    def _calculate_connections(self, file_size: int, connection_speed: float | Literal["auto"]) -> int:
+    def _calculate_connections(self, file_size: int, connection_speed: float) -> int:
         """
         Calculate the optimal number of connections based on file size and connection speed.
 
@@ -209,15 +210,11 @@ class TurboDL:
 
         Args:
             file_size (int): The size of the file in bytes.
-            connection_speed (float | Literal['auto']): Your connection speed in Mbps.
+            connection_speed (float): Your connection speed in Mbps.
 
         Returns:
             int: The estimated optimal number of connections, capped between 2 and 24.
         """
-
-        # Return the user-specified number of connections if not set to 'auto'
-        if self._max_connections != "auto":
-            return int(self._max_connections)
 
         # Convert file size from bytes to megabytes
         file_size_mb = file_size / (1024 * 1024)
@@ -252,14 +249,16 @@ class TurboDL:
         """
 
         # If the total size is zero, return a single range starting and ending at 0
-        if total_size == 0:
+        if total_size is None:
             return [(0, 0)]
 
         # Calculate the number of connections to use for the download
-        connections = self._calculate_connections(total_size, self._connection_speed)
+        if self._max_connections == "auto":
+            self._max_connections = self._calculate_connections(total_size, self._connection_speed)
+        self._max_connections = int(self._max_connections)
 
         # Calculate the size of each chunk
-        chunk_size = ceil(total_size / connections)
+        chunk_size = ceil(total_size / self._max_connections)
 
         ranges = []
         start = 0
@@ -323,7 +322,7 @@ class TurboDL:
                     chunk += data
 
                     # Update the progress bar
-                    progress.update(task_id, advance=len(data))
+                    progress.update(TaskID(task_id), advance=len(data))
 
                 # Return the downloaded chunk
                 return chunk
@@ -348,10 +347,35 @@ class TurboDL:
             task_id (int): The task ID of the progress bar.
         """
 
-        chunk_buffers: dict[int, ChunkBuffer] = {}
-        write_positions: dict[int, int] = {}
+        def write_to_file(data: bytes, position: int) -> None:
+            """
+            Write data to the output file at the specified position.
 
-        def download_worker(start: int, end: int, chunk_id: int) -> None:
+            Args:
+                data (bytes): The data to write to the file.
+                position (int): The position in the file to write the data.
+            """
+
+            # Open the file in read and write binary mode
+            with Path(output_path).open("r+b") as f:
+                # Get the current size of the file
+                current_size = f.seek(0, 2)
+
+                # If the file is smaller than the total size, truncate the file to the total size
+                if current_size < total_size:
+                    ftruncate(f.fileno(), total_size)
+
+                # Map the file to memory
+                with mmap(f.fileno(), length=total_size, access=ACCESS_WRITE) as mm:
+                    # Write the data to the memory map at the specified position
+                    mm[position : position + len(data)] = data
+
+                    # Flush the memory map to disk
+                    mm.flush()
+
+        def download_worker(
+            chunk_buffers: dict[int, ChunkBuffer], write_positions: list[int], start: int, end: int, chunk_id: int
+        ) -> None:
             """
             Download a chunk of a file from the provided URL.
 
@@ -386,7 +410,7 @@ class TurboDL:
                             write_positions[chunk_id] += len(complete_chunk)
 
                         # Update the progress bar
-                        progress.update(task_id, advance=len(data))
+                        progress.update(TaskID(task_id), advance=len(data))
 
                     # Write any remaining data in the buffer to the file
                     if remaining := chunk_buffers[chunk_id].current_buffer.getvalue():
@@ -395,42 +419,18 @@ class TurboDL:
                 # Raise a DownloadError if the request fails
                 raise DownloadError(f"Download error: {str(e)}") from e
 
-        def write_to_file(data: bytes, position: int) -> None:
-            """
-            Write data to the output file at the specified position.
-
-            Args:
-                data (bytes): The data to write to the file.
-                position (int): The position in the file to write the data.
-            """
-
-            # Open the file in read and write binary mode
-            with Path(output_path).open("r+b") as f:
-                # Get the current size of the file
-                current_size = f.seek(0, 2)
-
-                # If the file is smaller than the total size, truncate the file to the total size
-                if current_size < total_size:
-                    ftruncate(f.fileno(), total_size)
-
-                # Map the file to memory
-                with mmap(f.fileno(), length=total_size, access=ACCESS_WRITE) as mm:
-                    # Write the data to the memory map at the specified position
-                    mm[position : position + len(data)] = data
-
-                    # Flush the memory map to disk
-                    mm.flush()
 
         # Get the chunk ranges
         ranges = self._get_chunk_ranges(total_size)
 
-        # Initialize the write positions
-        write_positions = [0 for _ in ranges]
+        # Initialize buffers and write positions
+        chunk_buffers: dict[int, ChunkBuffer] = {}
+        write_positions = [0] * len(ranges)
 
         # Download the file
         with ThreadPoolExecutor(max_workers=len(ranges)) as executor:
             # Iterate over the chunk ranges
-            for future in [executor.submit(download_worker, start, end, i) for i, (start, end) in enumerate(ranges)]:
+            for future in [executor.submit(download_worker, chunk_buffers, write_positions, start, end, i) for i, (start, end) in enumerate(ranges)]:
                 future.result()
 
     def _download_direct(self, url: str, output_path: str | PathLike, total_size: int, progress: Progress, task_id: int) -> None:
@@ -493,7 +493,7 @@ class TurboDL:
                             start += chunk_len
 
                         # Update the progress bar
-                        progress.update(task_id, advance=chunk_len)
+                        progress.update(TaskID(task_id), advance=chunk_len)
             except Exception as e:
                 # Raise a DownloadError if any exception occurs during download
                 raise DownloadError(f"An error occurred while downloading chunk: {str(e)}") from e
