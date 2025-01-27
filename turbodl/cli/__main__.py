@@ -111,10 +111,7 @@ def download(
     )
     try:
         turbodl = TurboDL(
-            max_connections=max_connections,
-            connection_speed=connection_speed,
-            show_progress_bars=show_progress_bars,
-            timeout=timeout,
+            max_connections=max_connections, connection_speed=connection_speed, show_progress_bars=show_progress_bars
         )
         turbodl.download(
             url=url,
@@ -122,6 +119,7 @@ def download(
             pre_allocate_space=pre_allocate_space,
             use_ram_buffer=ram_buffer_value,
             overwrite=overwrite,
+            timeout=timeout,
             expected_hash=expected_hash,
             hash_type=hash_type,
         )
