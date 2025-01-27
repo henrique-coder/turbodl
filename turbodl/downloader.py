@@ -154,12 +154,10 @@ class TurboDL:
             self._max_connections = int(self._max_connections)
 
         if not (self._max_connections == "auto" or (isinstance(self._max_connections, int) and 1 <= self._max_connections <= 24)):
-            msg = f"max_connections must be 'auto' or an integer between 1 and 24: {self._max_connections}"
-            raise InvalidArgumentError(msg)
+            raise InvalidArgumentError(f"max_connections must be 'auto' or an integer between 1 and 24: {self._max_connections}")
 
         if self._connection_speed <= 0:
-            msg = f"connection_speed must be positive: {self._connection_speed}"
-            raise InvalidArgumentError(msg)
+            raise InvalidArgumentError(f"connection_speed must be positive: {self._connection_speed}")
 
         self._show_progress_bars: bool = show_progress_bars
         self._timeout: int | None = timeout
@@ -237,8 +235,101 @@ class TurboDL:
                 return chunk
         except HTTPStatusError as e:
             # Raise a DownloadError if the request fails
-            msg = f"An error occurred while downloading chunk: {e}"
-            raise DownloadError(msg) from e
+            raise DownloadError(f"An error occurred while downloading chunk: {e}") from e
+
+    def _download_with_buffer_file_writer(self, data: bytes, position: int, total_size: int, output_path: str | PathLike) -> None:
+        """
+        Write data to the output file at the specified position.
+
+        Args:
+            data (bytes): The data to write to the file.
+            position (int): The position in the file to write the data.
+            total_size (int): The total size of the file in bytes.
+            output_path (str | PathLike): The path to save the downloaded file to.
+        """
+
+        # Open the file in read and write binary mode
+        with Path(output_path).open("r+b") as f:
+            # Get the current size of the file
+            current_size = f.seek(0, 2)
+
+            # If the file is smaller than the total size, truncate the file to the total size
+            if current_size < total_size:
+                ftruncate(f.fileno(), total_size)
+
+            # Map the file to memory
+            with mmap(f.fileno(), length=total_size, access=ACCESS_WRITE) as mm:
+                # Write the data to the memory map at the specified position
+                mm[position : position + len(data)] = data
+
+                # Flush the memory map to disk
+                mm.flush()
+
+    def _download_with_buffer_download_worker(
+        self,
+        chunk_buffers: dict[int, ChunkBuffer],
+        write_positions: list[int],
+        start: int,
+        end: int,
+        chunk_id: int,
+        url: str,
+        total_size: int,
+        progress: Progress,
+        task_id: int,
+        output_path: str | PathLike,
+    ) -> None:
+        """
+        Download a chunk of a file from the provided URL.
+
+        Args:
+            start (int): The start index of the chunk.
+            end (int): The end index of the chunk.
+            chunk_id (int): The ID of the chunk.
+            url (str): The URL of the file to be downloaded.
+            total_size (int): The total size of the file in bytes.
+            progress (Progress): The progress bar to update.
+            task_id (int): The task ID of the progress bar.
+            output_path (str | PathLike): The path to save the downloaded file to.
+
+        Raises:
+            DownloadError: If the request fails.
+        """
+
+        # Initialize the chunk buffer
+        chunk_buffers[chunk_id] = ChunkBuffer()
+
+        # Set the range header
+        headers = {**self._custom_headers}
+
+        if end > 0:
+            headers["Range"] = f"bytes={start}-{end}"
+
+        try:
+            # Download the file chunk by chunk
+            with self._client.stream("GET", url, headers=headers) as r:
+                r.raise_for_status()
+
+                # Iterate over the response and update the progress bar for each chunk
+                for data in r.iter_bytes(chunk_size=1024 * 1024):
+                    # Write the chunk to the buffer
+                    if complete_chunk := chunk_buffers[chunk_id].write(data, total_size):
+                        # Write the complete chunk to the file
+                        self._download_with_buffer_file_writer(
+                            complete_chunk, start + write_positions[chunk_id], total_size, output_path
+                        )
+
+                        # Update the write position
+                        write_positions[chunk_id] += len(complete_chunk)
+
+                    # Update the progress bar
+                    progress.update(TaskID(task_id), advance=len(data))
+
+                # Write any remaining data in the buffer to the file
+                if remaining := chunk_buffers[chunk_id].current_buffer.getvalue():
+                    self._download_with_buffer_file_writer(remaining, start + write_positions[chunk_id], total_size, output_path)
+        except Exception as e:
+            # Raise a DownloadError if the request fails
+            raise DownloadError(f"An error occurred while downloading chunk: {e}") from e
 
     def _download_with_buffer(
         self, url: str, output_path: str | PathLike, total_size: int, progress: Progress, task_id: int
@@ -257,82 +348,6 @@ class TurboDL:
             task_id (int): The task ID of the progress bar.
         """
 
-        def write_to_file(data: bytes, position: int) -> None:
-            """
-            Write data to the output file at the specified position.
-
-            Args:
-                data (bytes): The data to write to the file.
-                position (int): The position in the file to write the data.
-            """
-
-            # Open the file in read and write binary mode
-            with Path(output_path).open("r+b") as f:
-                # Get the current size of the file
-                current_size = f.seek(0, 2)
-
-                # If the file is smaller than the total size, truncate the file to the total size
-                if current_size < total_size:
-                    ftruncate(f.fileno(), total_size)
-
-                # Map the file to memory
-                with mmap(f.fileno(), length=total_size, access=ACCESS_WRITE) as mm:
-                    # Write the data to the memory map at the specified position
-                    mm[position : position + len(data)] = data
-
-                    # Flush the memory map to disk
-                    mm.flush()
-
-        def download_worker(
-            chunk_buffers: dict[int, ChunkBuffer], write_positions: list[int], start: int, end: int, chunk_id: int
-        ) -> None:
-            """
-            Download a chunk of a file from the provided URL.
-
-            Args:
-                start (int): The start index of the chunk.
-                end (int): The end index of the chunk.
-                chunk_id (int): The ID of the chunk.
-
-            Raises:
-                DownloadError: If the request fails.
-            """
-
-            # Initialize the chunk buffer
-            chunk_buffers[chunk_id] = ChunkBuffer()
-
-            # Set the range header
-            headers = {**self._custom_headers}
-
-            if end > 0:
-                headers["Range"] = f"bytes={start}-{end}"
-
-            try:
-                # Download the file chunk by chunk
-                with self._client.stream("GET", url, headers=headers) as r:
-                    r.raise_for_status()
-
-                    # Iterate over the response and update the progress bar for each chunk
-                    for data in r.iter_bytes(chunk_size=1024 * 1024):
-                        # Write the chunk to the buffer
-                        if complete_chunk := chunk_buffers[chunk_id].write(data, total_size):
-                            # Write the complete chunk to the file
-                            write_to_file(complete_chunk, start + write_positions[chunk_id])
-
-                            # Update the write position
-                            write_positions[chunk_id] += len(complete_chunk)
-
-                        # Update the progress bar
-                        progress.update(TaskID(task_id), advance=len(data))
-
-                    # Write any remaining data in the buffer to the file
-                    if remaining := chunk_buffers[chunk_id].current_buffer.getvalue():
-                        write_to_file(remaining, start + write_positions[chunk_id])
-            except Exception as e:
-                # Raise a DownloadError if the request fails
-                msg = f"An error occurred while downloading chunk: {e}"
-                raise DownloadError(msg) from e
-
         # Get the chunk ranges
         ranges = get_chunk_ranges(total_size, self._max_connections, self._connection_speed)
 
@@ -344,7 +359,19 @@ class TurboDL:
         with ThreadPoolExecutor(max_workers=len(ranges)) as executor:
             # Iterate over the chunk ranges
             for future in [
-                executor.submit(download_worker, chunk_buffers, write_positions, start, end, i)
+                executor.submit(
+                    self._download_with_buffer_download_worker,
+                    chunk_buffers,
+                    write_positions,
+                    start,
+                    end,
+                    i,
+                    url,
+                    total_size,
+                    progress,
+                    task_id,
+                    output_path,
+                )
                 for i, (start, end) in enumerate(ranges)
             ]:
                 future.result()
@@ -472,16 +499,14 @@ class TurboDL:
 
         # Check if the URL is provided
         if not url:
-            msg = "Missing URL value"
-            raise InvalidArgumentError(msg)
+            raise InvalidArgumentError("Missing URL value")
 
         # Resolve the output path, defaulting to the current working directory if not provided
         output_path = Path.cwd() if output_path is None else Path(output_path).resolve()
 
         # Check if the use_ram_buffer is a boolean or 'auto'
         if not (use_ram_buffer == "auto" or isinstance(use_ram_buffer, bool)):
-            msg = f"Invalid use_ram_buffer value: {use_ram_buffer}: expected 'auto' or boolean"
-            raise InvalidArgumentError(msg)
+            raise InvalidArgumentError(f"Invalid use_ram_buffer value: {use_ram_buffer}: expected 'auto' or boolean")
 
         # Determine if the output path is a RAM directory
         is_ram_directory = looks_like_a_ram_directory(output_path)
@@ -507,8 +532,7 @@ class TurboDL:
 
         # Check if there is enough space to download the file
         if not has_unknown_info and not has_available_space(output_path, total_size):
-            msg = f"Not enough space to download {total_size} bytes to '{output_path.as_posix()}'"
-            raise InsufficientSpaceError(msg)
+            raise InsufficientSpaceError(f"Not enough space to download {total_size} bytes to '{output_path.as_posix()}'")
 
         try:
             # If output path is a directory, append suggested filename
@@ -580,8 +604,7 @@ class TurboDL:
             return
         except Exception as e:
             # Handle any other download exceptions
-            msg = f"An error occurred while downloading file: {e}"
-            raise DownloadError(msg) from e
+            raise DownloadError(f"An error occurred while downloading file: {e}") from e
 
         # Verify the hash of the downloaded file if an expected hash is provided
         if expected_hash is not None:
@@ -598,5 +621,4 @@ class TurboDL:
                 Path(output_path).unlink(missing_ok=True)
                 self.output_path = None
 
-                msg = f'Hash verification failed. Hash type: "{hash_type}". Actual hash: "{file_hash}". Expected hash: "{expected_hash}".'
-                raise HashVerificationError(msg)
+                raise HashVerificationError(f'Hash verification failed. Hash type: "{hash_type}" - Actual hash: "{file_hash}" - Expected hash: "{expected_hash}"')
