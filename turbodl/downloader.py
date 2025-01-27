@@ -34,7 +34,7 @@ class ChunkBuffer:
     A class for buffering chunks of data.
     """
 
-    def __init__(self, chunk_size_mb: int = 256, max_buffer_mb: int = 1024) -> None:
+    def __init__(self, chunk_size_bytes: int = 256*(1024**2), max_buffer_bytes: int = 1*(1024**3)) -> None:
         """
         Initialize the ChunkBuffer class.
 
@@ -43,16 +43,16 @@ class ChunkBuffer:
         order to be able to write the data to the file in chunks.
 
         Args:
-            chunk_size_mb (int): The size of each chunk in megabytes.
-            max_buffer_mb (int): The maximum size of the buffer in megabytes.
+            chunk_size_bytes (int): The size of each chunk in bytes.
+            max_buffer_bytes (int): The maximum size of the buffer in bytes.
         """
 
         # Calculate the chunk size in bytes
-        self.chunk_size = chunk_size_mb * 1024 * 1024
+        self.chunk_size = chunk_size_bytes
 
         # Calculate the maximum buffer size in bytes
         # The maximum buffer size is the minimum of the maximum buffer size and 30% of the available virtual memory
-        self.max_buffer_size = min(max_buffer_mb * 1024 * 1024, virtual_memory().available * 0.30)
+        self.max_buffer_size = min(max_buffer_bytes, virtual_memory().available * 0.30)
 
         # Initialize the current buffer as an empty BytesIO object
         self.current_buffer = BytesIO()
@@ -63,7 +63,7 @@ class ChunkBuffer:
         # Initialize the total amount of data buffered to 0
         self.total_buffered = 0
 
-    def write(self, data: bytes, total_file_size: int) -> bytes | None:
+    def write(self, data: bytes, total_file_size_bytes: int) -> bytes | None:
         """
         Write data to the buffer.
 
@@ -74,7 +74,7 @@ class ChunkBuffer:
 
         Args:
             data (bytes): The data to write to the buffer.
-            total_file_size (int): The total size of the file in bytes.
+            total_file_size_bytes (int): The total size of the file in bytes.
 
         Returns:
             bytes | None: Returns buffered data when buffer is full or conditions are met, None if buffer still has space.
@@ -89,7 +89,7 @@ class ChunkBuffer:
             return None
 
         # Check if the total size of data written to the buffer is less than the total file size
-        if self.total_buffered + len(data) > total_file_size:
+        if self.total_buffered + len(data) > total_file_size_bytes:
             return None
 
         self.current_buffer.write(data)
@@ -98,7 +98,7 @@ class ChunkBuffer:
 
         if (
             self.current_size >= self.chunk_size
-            or self.total_buffered >= total_file_size
+            or self.total_buffered >= total_file_size_bytes
             or self.current_size >= self.max_buffer_size
         ):
             chunk_data = self.current_buffer.getvalue()
