@@ -17,8 +17,8 @@ help:
 setup-venv:
 	@echo "Creating virtual environment..."
 	@test -d $(VENV) || $(PYTHON) -m venv $(VENV)
-	@$(VENV)/bin/pip install -U pip
-	@$(VENV)/bin/pip install -U poetry
+	@$(VENV)/bin/pip install --upgrade pip
+	@$(VENV)/bin/pip install --upgrade poetry
 	@touch $(VENV)
 	@echo "Virtual environment created at $(VENV) with Poetry installed"
 
