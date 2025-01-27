@@ -45,11 +45,9 @@ jobs:
       - name: 📝 Extract Version and Text from Changelog
         id: version_info
         run: |
-          # Get the first version entry and description
           VERSION=$(grep -oP '## \[\K[^\]]+' CHANGELOG.md | head -n1)
           EXTRA_TEXT=$(grep -oP '## \[[^\]]+\] - \(\K[^\)]+' CHANGELOG.md | head -n1)
 
-          # Get all content between this version header and the next version header and add empty lines between sections
           CHANGES=$(awk '/## \['$VERSION'\]/{flag=1;next}/## \[/{flag=0}flag' CHANGELOG.md | sed 's/####/\n####/g' | sed '1d')
 
           echo "Version detected: $VERSION"
@@ -68,13 +66,15 @@ jobs:
           CURRENT_VERSION="v${{ steps.version_info.outputs.version }}"
 
           if [ "$PREV_TAG" == "$CURRENT_VERSION" ]; then
-            echo "Version $CURRENT_VERSION already released, skipping..."
-            exit 1
+            echo "Version $CURRENT_VERSION already released, no changes needed."
+            echo "should_continue=false" >> $GITHUB_OUTPUT
+          else
+            echo "New version detected: $CURRENT_VERSION (previous was $PREV_TAG)"
+            echo "should_continue=true" >> $GITHUB_OUTPUT
           fi
 
-          echo "New version detected: $CURRENT_VERSION (previous was $PREV_TAG)"
-
       - name: 🏷️ Get Previous Tag
+        if: steps.check_version.outputs.should_continue == 'true'
         id: previoustag
         run: |
           PREV_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
@@ -82,6 +82,7 @@ jobs:
           echo "tag=$PREV_TAG" >> $GITHUB_OUTPUT
 
       - name: 📝 Generate Commit List
+        if: steps.check_version.outputs.should_continue == 'true'
         id: commit_list
         run: |
           COMMITS=$(git log --reverse --pretty=format:"- [%s](https://github.com/${{ github.repository }}/commit/%H)" ${{ steps.previoustag.outputs.tag }}..HEAD || echo "- No significant changes in this release")
@@ -90,6 +91,7 @@ jobs:
           echo "EOF" >> $GITHUB_OUTPUT
 
       - name: 🐍 Setup Python
+        if: steps.check_version.outputs.should_continue == 'true'
         uses: actions/setup-python@v5
         with:
           python-version: "3.13"
@@ -97,21 +99,26 @@ jobs:
           check-latest: true
 
       - name: 🔧 Install Build Tools
+        if: steps.check_version.outputs.should_continue == 'true'
         run: |
           python -m pip install --upgrade pip build twine yq
 
       - name: 🏗️ Build Package
+        if: steps.check_version.outputs.should_continue == 'true'
         run: python -m build --sdist --wheel
 
       - name: ✅ Validate Metadata
+        if: steps.check_version.outputs.should_continue == 'true'
         run: twine check dist/*
 
       - name: 🌍 Set Timezone
+        if: steps.check_version.outputs.should_continue == 'true'
         uses: szenius/set-timezone@v2.0
         with:
           timezoneLinux: "UTC"
 
       - name: 🚀 Create Release
+        if: steps.check_version.outputs.should_continue == 'true'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ steps.version_info.outputs.version }}
@@ -143,6 +150,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: 🚀 Upload to PyPI
+        if: steps.check_version.outputs.should_continue == 'true'
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           # password: ${{ secrets.PYPI_API_TOKEN }}
