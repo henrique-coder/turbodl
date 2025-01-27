@@ -26,4 +26,4 @@
 
 ## [0.0.1] - (Initial Release)
 #### Added
-- Added initial project files
+- Added project files
