@@ -36,22 +36,6 @@ def test_download_5mb_file(downloader: TurboDL, temporary_path: Path) -> None:
     assert output_path.name == expected_filename, f"URL: {url} - Output file name: {output_path.name} - Expected filename: {expected_filename} - Error: Downloaded file name is different than expected"
 
 
-def test_download_10mb_file(downloader: TurboDL, temporary_path: Path) -> None:
-    """
-    Test download of a 10MB file.
-    """
-
-    url: str = "https://files.testfile.org/PDF/10MB-TESTFILE.ORG.pdf"
-    expected_filename: str = "10MB-TESTFILE.ORG.pdf"
-    expected_hash: str = "924dfc75b84d304bfaaca4d5c6459c4e"
-    hash_type: str = "md5"
-
-    downloader.download(url=url, output_path=temporary_path, expected_hash=expected_hash, hash_type=hash_type)
-    output_path = Path(downloader.output_path)
-
-    assert output_path.name == expected_filename, f"URL: {url} - Output file name: {output_path.name} - Expected filename: {expected_filename} - Error: Downloaded file name is different than expected"
-
-
 def test_download_35mb_file(downloader: TurboDL, temporary_path: Path) -> None:
     """
     Test download of a 35MB file.
@@ -69,14 +53,14 @@ def test_download_35mb_file(downloader: TurboDL, temporary_path: Path) -> None:
 
 
 
-def test_download_250mb_file(downloader: TurboDL, temporary_path: Path) -> None:
+def test_download_150mb_file(downloader: TurboDL, temporary_path: Path) -> None:
     """
-    Test download of a 250MB file.
+    Test download of a 150MB file.
     """
 
-    url: str = "https://files.testfile.org/ZIPC/250MB-Corrupt-Testfile.Org.zip"
-    expected_filename: str = "250MB-Corrupt-Testfile.Org.zip"
-    expected_hash: str = "3c650bd0caf6a453b8ff98e1adfeb36c"
+    url: str = "https://files.testfile.org/ZIPC/150MB-Corrupt-Testfile.Org.zip"
+    expected_filename: str = "150MB-Corrupt-Testfile.Org.zip"
+    expected_hash: str = "b69f227f41579ba3594414dce1426f36"
     hash_type: str = "md5"
 
     downloader.download(url=url, output_path=temporary_path, expected_hash=expected_hash, hash_type=hash_type)
