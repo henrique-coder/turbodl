@@ -56,16 +56,17 @@ rich = "13.9.4"
 tenacity = "9.0.0"
 typer = "0.15.1"
 
-[tool.poetry.group.test.dependencies]
-pytest = "8.3.4"
-
 [tool.poetry.group.lint.dependencies]
 ruff = "0.9.3"
 
-[tool.poetry.group.typecheck.dependencies]
-mypy = "1.14.1"
-pydantic = "2.10.6"
-types-psutil = "6.1.0.20241221"
+[tool.poetry.group.test.dependencies]
+pytest = "8.3.4"
+pytest-randomly = "3.16.0"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_functions = ["test_*"]
 
 [tool.poetry.scripts]
 turbodl = "turbodl.cli.__main__:app"
