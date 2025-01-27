@@ -136,8 +136,8 @@ Contributions are what make the open source community such an amazing place to l
 
 If you have a suggestion that would make this better, fork the repository and create a pull request. You can also simply open an issue and describe your ideas or report bugs. **Don't forget to give the project a star if you like it!**
 
-1. Fork the project;
-2. Create your feature branch ・ `git checkout -b feature/{feature_name}`;
-3. Commit your changes ・ `git commit -m "{commit_message}"`;
-4. Push to the branch ・ `git push origin feature/{feature_name}`;
-5. Open a pull request, describing the changes you made and wait for a review.
+<br>
+
+<a href="https://github.com/henrique-coder/turbodl/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=henrique-coder/turbodl" />
+</a>
