@@ -3,6 +3,8 @@ name: Auto Release Creation and PyPI Publishing
 on:
   push:
     branches: ["main"]
+    paths:
+      - 'CHANGELOG.md'
 
 permissions:
   contents: write
@@ -16,7 +18,6 @@ jobs:
   create-release-and-publish:
     name: 🏷️ Create Release and Publish to PyPI
     runs-on: ubuntu-22.04
-    if: startsWith(github.event.head_commit.message, 'Bump version to')
     timeout-minutes: 10
 
     steps:
@@ -41,18 +42,24 @@ jobs:
           echo "pkg_title=$PACKAGE_TITLE" >> $GITHUB_OUTPUT
           echo "pkg_desc=$PACKAGE_DESC" >> $GITHUB_OUTPUT
 
-      - name: 📝 Extract Version and Text
+      - name: 📝 Extract Version and Text from Changelog
         id: version_info
         run: |
-          COMMIT_MSG="${{ github.event.head_commit.message }}"
-          VERSION=$(echo "$COMMIT_MSG" | grep -oP 'Bump version to \K[^ )]+')
-          EXTRA_TEXT=$(echo "$COMMIT_MSG" | grep -oP '\(.*\)' | sed 's/[()]//g' || echo "")
+          # Get the first version entry and description
+          VERSION=$(grep -oP '## \[\K[^\]]+' CHANGELOG.md | head -n1)
+          EXTRA_TEXT=$(grep -oP '## \[[^\]]+\] - \(\K[^\)]+' CHANGELOG.md | head -n1)
+
+          # Get all content between this version header and the next version header and add empty lines between sections
+          CHANGES=$(awk '/## \['$VERSION'\]/{flag=1;next}/## \[/{flag=0}flag' CHANGELOG.md | sed 's/####/\n####/g' | sed '1d')
 
           echo "Version detected: $VERSION"
           echo "Extra text: $EXTRA_TEXT"
 
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "extra_text=$EXTRA_TEXT" >> $GITHUB_OUTPUT
+          echo "changes<<EOF" >> $GITHUB_OUTPUT
+          echo "$CHANGES" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
 
       - name: 🏷️ Get Previous Tag
         id: previoustag
@@ -64,7 +71,7 @@ jobs:
       - name: 📝 Generate Commit List
         id: commit_list
         run: |
-          COMMITS=$(git log --pretty=format:"- [%s](https://github.com/${{ github.repository }}/commit/%H)" ${{ steps.previoustag.outputs.tag }}..HEAD || echo "- No significant changes in this release")
+          COMMITS=$(git log --reverse --pretty=format:"- [%s](https://github.com/${{ github.repository }}/commit/%H)" ${{ steps.previoustag.outputs.tag }}..HEAD || echo "- No significant changes in this release")
           echo "commits<<EOF" >> $GITHUB_OUTPUT
           echo "$COMMITS" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
@@ -103,7 +110,11 @@ jobs:
 
             ❇️ Available for automatic installation at [PyPI](https://pypi.org/project/${{ steps.release_config.outputs.pkg_name }}) and manual installation at [GitHub](https://github.com/${{ github.repository }}).
 
-            ### 📋 Changelog:
+            ### 📋 Changes in this version:
+
+            ${{ steps.version_info.outputs.changes }}
+
+            ### 📋 Commit History:
 
             ${{ steps.commit_list.outputs.commits }}
 
