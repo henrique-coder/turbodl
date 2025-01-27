@@ -9,10 +9,121 @@ from urllib.parse import unquote, urlparse
 # Third-party imports
 from httpx import Client, HTTPError, RemoteProtocolError
 from psutil import disk_partitions, disk_usage
+from rich.progress import ProgressColumn, Task
+from rich.text import Text
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 # Local imports
 from .exceptions import OnlineRequestError
+
+
+class CustomTimeColumn(ProgressColumn):
+    """
+    Renders time elapsed and remaining in a dynamic format (e.g., '1h2m3s').
+    """
+
+    def __init__(self, elapsed_style: str = "white", remaining_style: str = "white") -> None:
+        """
+        Initialize the CustomTimeColumn instance.
+
+        This class is used as a column in the progress bar to display the elapsed and remaining time.
+
+        Args:
+            elapsed_style (str, optional): The style to use for the elapsed time. Defaults to "bold white".
+            remaining_style (str, optional): The style to use for the remaining time. Defaults to "bold white".
+        """
+
+        # Store the styles for the elapsed and remaining times
+        self.elapsed_style: str = elapsed_style
+        self.remaining_style: str = remaining_style
+
+        # Initialize the CustomTimeColumn instance
+        super().__init__()
+
+    def _format_time(self, seconds: float | None) -> str:
+        """Format seconds into a human-readable string.
+
+        Args:
+            seconds (float | None): Number of seconds to format. If None or negative, returns '0s'.
+
+        Returns:
+            str: Formatted time string (e.g., '1h2m3s', '5m30s', '45s').
+
+        This function takes a number of seconds and formats it into a human-readable string.
+        If the input is None or negative, it returns '0s'.
+        """
+
+        # If the input is None or negative, return '0s'
+        if seconds is None or seconds < 0:
+            return "0s"
+
+        # Calculate the days, hours, minutes, and seconds
+        days, remainder = divmod(int(seconds), 86400)
+        hours, remainder = divmod(remainder, 3600)
+        minutes, seconds = divmod(remainder, 60)
+
+        # Initialize an empty list to store the time parts
+        parts: list[str] = []
+
+        # If the number of days is greater than 0, add it to the parts list
+        if days > 0:
+            parts.append(f"{days}d")
+        # If the number of hours is greater than 0, add it to the parts list
+        if hours > 0:
+            parts.append(f"{hours}h")
+        # If the number of minutes is greater than 0, add it to the parts list
+        if minutes > 0:
+            parts.append(f"{minutes}m")
+        # If the number of seconds is greater than 0 or if the parts list is empty, add it to the parts list
+        if seconds > 0 or not parts:
+            parts.append(f"{seconds}s")
+
+        # Join the parts list into a single string and return it
+        return "".join(parts)
+
+    def render(self, task: Task) -> Text:
+        """
+        Render the time column.
+
+        This method formats the elapsed time and estimated remaining time for a
+        progress task and returns a Text object containing the formatted string.
+
+        Args:
+            task (Task): The progress task containing timing information.
+
+        Returns:
+            Text: A Text object containing the formatted time string.
+        """
+
+        # Get the elapsed time from the task
+        elapsed: float | None = task.finished_time if task.finished else task.elapsed
+
+        # Get the estimated remaining time from the task
+        remaining: float | None = task.time_remaining
+
+        # Format the elapsed time into a human-readable string
+        elapsed_str: str = self._format_time(elapsed)
+
+        # Format the estimated remaining time into a human-readable string
+        remaining_str: str = self._format_time(remaining)
+
+        # Return a Text object containing the formatted time string
+        return Text(f"{elapsed_str} elapsed ({remaining_str} remaining)", style=self.elapsed_style)
+
+
+def bool_to_yes_no(value: bool) -> Literal["yes", "no"]:
+    """
+    Convert boolean value to 'yes' or 'no' string.
+
+    Args:
+        value (bool): The boolean value to be converted.
+
+    Returns:
+        Literal["yes", "no"]: The converted string ('yes' or 'no').
+    """
+
+    # Return 'yes' if the boolean value is True, otherwise return 'no'
+    return "yes" if value else "no"
 
 
 def calculate_connections(file_size: int, connection_speed: float) -> int:
@@ -116,6 +227,40 @@ def fetch_file_info(
 
     # Return the file information
     return {"size": content_length, "mimetype": content_type, "filename": filename}
+
+
+def format_size(size_bytes: int) -> str:
+    """
+    Format size in bytes to human readable format.
+
+    This function takes an integer representing a size in bytes and returns a string representation of the size, using the appropriate unit (B, KB, MB, GB, TB).
+
+    Args:
+        size_bytes (int): The size in bytes to format.
+
+    Returns:
+        str: A string representation of the size in bytes, using the appropriate unit (B, KB, MB, GB, TB).
+    """
+
+    if size_bytes == 0:
+        return "0.00 B"
+
+    # List of units to use for formatting
+    units = ["B", "KB", "MB", "GB", "TB"]
+
+    # Size in bytes as a float
+    size = float(size_bytes)
+
+    # Index of the current unit
+    unit_index = 0
+
+    # Divide the size by 1024 until it is less than 1024
+    while size >= 1024.0 and unit_index < len(units) - 1:
+        size /= 1024.0
+        unit_index += 1
+
+    # Format the size with 2 decimal places and the appropriate unit
+    return f"{size:.2f} {units[unit_index]}"
 
 
 def get_chunk_ranges(
