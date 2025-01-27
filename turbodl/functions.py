@@ -9,7 +9,7 @@ from urllib.parse import unquote, urlparse
 # Third-party imports
 from httpx import Client, HTTPError, RemoteProtocolError
 from psutil import disk_partitions, disk_usage
-from rich.progress import ProgressColumn, Task
+from rich.progress import DownloadColumn, ProgressColumn, Task, TransferSpeedColumn
 from rich.text import Text
 from tenacity import retry, stop_after_attempt, wait_exponential
 
@@ -17,25 +17,126 @@ from tenacity import retry, stop_after_attempt, wait_exponential
 from .exceptions import OnlineRequestError
 
 
+class CustomDownloadColumn(DownloadColumn):
+    """
+    A DownloadColumn that allows custom styling.
+    """
+
+    def __init__(self, style: str | None = None) -> None:
+        """
+        Initialize the CustomDownloadColumn instance.
+
+        Args:
+            style (str | None): The style to apply to the download text. Defaults to None.
+        """
+
+        # Store the style for the download text
+        self.style = style
+
+        # Call the superclass constructor
+        super().__init__()
+
+    def render(self, task: Task) -> Text:
+        """
+        Render the download text with custom styling.
+
+        This method retrieves the base download text from the superclass,
+        applies the custom style if specified, and returns the styled text.
+
+        Args:
+            task (Task): The task for which the download text is being rendered.
+
+        Returns:
+            Text: The rendered download text with optional custom styling.
+        """
+
+        # Get the base download text from the superclass
+        download_text = super().render(task)
+
+        # Apply custom style if specified
+        if self.style:
+            download_text.stylize(self.style)
+
+        # Return the styled download text
+        return download_text
+
+
+class CustomSpeedColumn(TransferSpeedColumn):
+    """
+    A TransferSpeedColumn that allows custom styling.
+    """
+
+    def __init__(self, style: str | None = None) -> None:
+        """
+        Initialize the CustomSpeedColumn instance.
+
+        Args:
+            style (str | None): The style to apply to the speed text. Defaults to None.
+        """
+
+        # Store the style for the speed text
+        self.style = style
+
+        # Call the superclass constructor
+        super().__init__()
+
+    def render(self, task: Task) -> Text:
+        """
+        Render the speed column with custom styling.
+
+        This method retrieves the base speed text from the superclass,
+        applies the custom style if provided, and returns the styled text.
+
+        Args:
+            task (Task): The task for which the speed is being rendered.
+
+        Returns:
+            Text: The rendered speed text with optional custom styling.
+        """
+
+        # Get the base speed text from the superclass
+        speed_text = super().render(task)
+
+        # Apply custom style if specified
+        if self.style:
+            speed_text.stylize(self.style)
+
+        # Return the styled speed text
+        return speed_text
+
+
 class CustomTimeColumn(ProgressColumn):
     """
     Renders time elapsed and remaining in a dynamic format (e.g., '1h2m3s').
     """
 
-    def __init__(self, elapsed_style: str = "white", remaining_style: str = "white") -> None:
+    def __init__(
+        self,
+        elapsed_style: str = "white",
+        remaining_style: str | None = None,
+        parentheses_style: str | None = None,
+        separator: str | None = None,
+        separator_style: str | None = None,
+    ) -> None:
         """
         Initialize the CustomTimeColumn instance.
 
         This class is used as a column in the progress bar to display the elapsed and remaining time.
 
         Args:
-            elapsed_style (str, optional): The style to use for the elapsed time. Defaults to "bold white".
-            remaining_style (str, optional): The style to use for the remaining time. Defaults to "bold white".
+            elapsed_style (str, optional): The style to use for the elapsed time. Defaults to "white".
+            remaining_style (str | None, optional): The style to use for the remaining time. Defaults to None.
+            parentheses_style (str | None, optional): The style to use for parentheses. Defaults to None.
+            separator (str | None, optional): Text to separate elapsed and remaining time. Only included if not None. Defaults to None.
+            separator_style (str | None, optional): The style to use for separator. If None and separator is not None, uses elapsed_style. Defaults to None.
         """
 
         # Store the styles for the elapsed and remaining times
         self.elapsed_style: str = elapsed_style
-        self.remaining_style: str = remaining_style
+        self.remaining_style: str | None = remaining_style
+        self.parentheses_style: str | None = parentheses_style
+        self.separator: str | None = separator
+        self.separator_style: str | None = separator_style or elapsed_style if separator else None
 
         # Initialize the CustomTimeColumn instance
         super().__init__()
@@ -95,20 +196,38 @@ class CustomTimeColumn(ProgressColumn):
             Text: A Text object containing the formatted time string.
         """
 
-        # Get the elapsed time from the task
+        # Get the elapsed and remaining times
         elapsed: float | None = task.finished_time if task.finished else task.elapsed
-
-        # Get the estimated remaining time from the task
         remaining: float | None = task.time_remaining
 
-        # Format the elapsed time into a human-readable string
+        # Format the times
         elapsed_str: str = self._format_time(elapsed)
-
-        # Format the estimated remaining time into a human-readable string
         remaining_str: str = self._format_time(remaining)
 
-        # Return a Text object containing the formatted time string
-        return Text(f"{elapsed_str} elapsed ({remaining_str} remaining)", style=self.elapsed_style)
+        # Create Text objects with different styles
+        result = Text()
+
+        # Add elapsed time
+        result.append(f"{elapsed_str} elapsed", style=self.elapsed_style)
+
+        # Add separator if provided
+        if self.separator:
+            result.append(f" {self.separator} ", style=self.separator_style)
+        elif self.remaining_style:  # Add space if no separator but has remaining time
+            result.append(" ")
+
+        # Add remaining time with or without parentheses
+        if self.remaining_style:
+            if self.parentheses_style:
+                result.append("(", style=self.parentheses_style)
+
+            result.append(f"{remaining_str} remaining", style=self.remaining_style)
+
+            if self.parentheses_style:
+                result.append(")", style=self.parentheses_style)
+
+        # Return the rendered Text object
+        return result
 
 
 def bool_to_yes_no(value: bool) -> Literal["yes", "no"]:

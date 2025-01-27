@@ -12,12 +12,14 @@ from typing import Any, Literal
 from httpx import Client, HTTPStatusError, Limits
 from psutil import virtual_memory
 from rich.console import Console
-from rich.progress import BarColumn, DownloadColumn, Progress, SpinnerColumn, TaskID, TextColumn, TransferSpeedColumn
+from rich.progress import BarColumn, Progress, SpinnerColumn, TaskID, TextColumn
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 # Local imports
 from .exceptions import DownloadError, HashVerificationError, InsufficientSpaceError, InvalidArgumentError
 from .functions import (
+    CustomDownloadColumn,
+    CustomSpeedColumn,
     CustomTimeColumn,
     bool_to_yes_no,
     fetch_file_info,
@@ -587,12 +589,17 @@ class TurboDL:
                 TextColumn("[bold bright_black]╰─◾"),  # ⯀ ◾ ▪
                 BarColumn(style="bold white", complete_style="bold red", finished_style="bold green"),
                 TextColumn("[bold bright_black]•"),
-                DownloadColumn(),
-                TextColumn("[bold bright_black]• [not bold][magenta][progress.percentage]{task.percentage:>3.0f}%"),
+                CustomDownloadColumn(style="bold"),
+                TextColumn("[bold bright_black]• [magenta][progress.percentage]{task.percentage:>3.0f}%"),
                 TextColumn("[bold bright_black]•"),
-                TransferSpeedColumn(),
+                CustomSpeedColumn(style="bold"),
                 TextColumn("[bold bright_black]•"),
-                CustomTimeColumn(elapsed_style="steel_blue", remaining_style="white"),
+                CustomTimeColumn(
+                    elapsed_style="bold steel_blue",
+                    remaining_style="bold blue",
+                    separator="•",
+                    separator_style="bold bright_black",
+                ),
             ]
 
             # Perform the download
