@@ -556,8 +556,6 @@ class TurboDL:
         if not has_unknown_info and not has_available_space(output_path, total_size):
             raise InsufficientSpaceError(f"Not enough space to download {total_size} bytes to '{output_path.as_posix()}'")
 
-        self._console.line()
-
         try:
             # If output path is a directory, append suggested filename
             if output_path.is_dir():
