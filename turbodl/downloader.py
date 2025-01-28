@@ -17,7 +17,7 @@ from tenacity import retry, stop_after_attempt, wait_exponential
 
 # Local imports
 from .exceptions import DownloadError, HashVerificationError, InsufficientSpaceError, InvalidArgumentError
-from .functions import (
+from .utils import (
     CustomDownloadColumn,
     CustomSpeedColumn,
     CustomTimeColumn,
