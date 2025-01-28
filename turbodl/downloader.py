@@ -597,7 +597,7 @@ class TurboDL:
 
             # Set up status message
             self._console.print(
-                f"[bold bright_black]╭ [green]Downloading [blue]{url} [bright_black]• [green]{format_size(total_size)}"
+                f"[bold bright_black]╭ [green]Downloading [blue]{url} [bright_black]• [green]~{format_size(total_size)}"
             )
             self._console.print(
                 f"[bold bright_black]│ [green]Output file: [cyan]{self.output_path} [bright_black]• [green]RAM dir: [cyan]{bool_to_yes_no(is_ram_directory)} [bright_black]• [green]RAM buffer: [cyan]{bool_to_yes_no(use_ram_buffer)} [bright_black]• [green]Connection speed: [cyan]{self._connection_speed} Mbps"
