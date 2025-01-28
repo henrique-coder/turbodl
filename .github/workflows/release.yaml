@@ -90,15 +90,6 @@ jobs:
           echo "$COMMITS" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
-      - name: 📝 Generate Contributors List
-        if: steps.check_version.outputs.should_continue == 'true'
-        id: contributors_list
-        run: |
-          CONTRIBUTORS=$(git log --reverse --format="- [@%aN](https://github.com/%aE | cut -d@ -f1)" ${{ steps.previoustag.outputs.tag }}..HEAD | sort -u)
-          echo "contributors<<EOF" >> $GITHUB_OUTPUT
-          echo "$CONTRIBUTORS" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-
       - name: 🐍 Setup Python
         if: steps.check_version.outputs.should_continue == 'true'
         uses: actions/setup-python@v5
@@ -146,12 +137,6 @@ jobs:
             ### 📋 Commit History:
 
             ${{ steps.commit_list.outputs.commits }}
-
-            ### 👥 Contributors:
-
-            Thank you to all contributors for this release:
-
-            ${{ steps.contributors_list.outputs.contributors }}
 
             ### 📊 Compare Changes
 
