@@ -3,7 +3,7 @@ from math import ceil, log2, sqrt
 from mimetypes import guess_extension as guess_mimetype_extension
 from os import PathLike
 from pathlib import Path
-from typing import Any, Literal
+from typing import Literal
 from urllib.parse import unquote, urlparse
 
 # Third-party imports
@@ -289,7 +289,7 @@ def calculate_connections(file_size: int, connection_speed: float) -> int:
 
 
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=6), reraise=True)
-def fetch_file_info(url: str, httpx_client: Client, headers: dict[str, Any]) -> dict[str, str | int] | None:
+def fetch_file_info(url: str, httpx_client: Client) -> dict[str, str | int] | None:
     """
     Get information about the file to be downloaded.
 
@@ -299,7 +299,6 @@ def fetch_file_info(url: str, httpx_client: Client, headers: dict[str, Any]) -> 
     Args:
         url (str): The URL of the file to be downloaded.
         httpx_client (Client): The HTTPX client to use for the request.
-        headers (dict[str, Any]): The headers to include in the request.
 
     Returns:
         dict[str, str | int] | None: A dictionary containing the file size, mimetype, and filename, or None if the request fails.
@@ -310,7 +309,7 @@ def fetch_file_info(url: str, httpx_client: Client, headers: dict[str, Any]) -> 
 
     try:
         # Send a HEAD request to the URL to get the file information
-        r = httpx_client.head(url, headers=headers)
+        r = httpx_client.head(url)
     except RemoteProtocolError:
         # If the request fails due to a remote protocol error, return None
         return None
@@ -342,7 +341,7 @@ def fetch_file_info(url: str, httpx_client: Client, headers: dict[str, Any]) -> 
         filename = Path(unquote(urlparse(url).path)).name or f"unknown_file{guess_mimetype_extension(content_type) or ''}"
 
     # Return the file information
-    return {"size": content_length, "mimetype": content_type, "filename": filename}
+    return {"url": r.url, "size": content_length, "mimetype": content_type, "filename": filename}
 
 
 def format_size(size_bytes: int) -> str:
