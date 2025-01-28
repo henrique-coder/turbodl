@@ -13,8 +13,8 @@ TurboDL is an extremely smart, fast, and efficient download manager with several
 - Retry failed requests efficiently.
 - Automatically detects file information before download.
 - Automatically handles redirects.
-- Supports post-download hash verification.
 - Automatically uses RAM buffer to speed up downloads and reduce disk I/O overhead.
+- Supports post-download hash verification.
 - Accurately displays a beautiful progress bar.
 
 <br>
