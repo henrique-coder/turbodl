@@ -23,41 +23,16 @@ class CustomDownloadColumn(DownloadColumn):
     """
 
     def __init__(self, style: str | None = None) -> None:
-        """
-        Initialize the CustomDownloadColumn instance.
-
-        Args:
-            style (str | None): The style to apply to the download text. Defaults to None.
-        """
-
-        # Store the style for the download text
         self.style = style
 
-        # Call the superclass constructor
         super().__init__()
 
     def render(self, task: Task) -> Text:
-        """
-        Render the download text with custom styling.
-
-        This method retrieves the base download text from the superclass,
-        applies the custom style if specified, and returns the styled text.
-
-        Args:
-            task (Task): The task for which the download text is being rendered.
-
-        Returns:
-            Text: The rendered download text with optional custom styling.
-        """
-
-        # Get the base download text from the superclass
         download_text = super().render(task)
 
-        # Apply custom style if specified
         if self.style:
             download_text.stylize(self.style)
 
-        # Return the styled download text
         return download_text
 
 
@@ -67,41 +42,16 @@ class CustomSpeedColumn(TransferSpeedColumn):
     """
 
     def __init__(self, style: str | None = None) -> None:
-        """
-        Initialize the CustomSpeedColumn instance.
-
-        Args:
-            style (str | None): The style to apply to the speed text. Defaults to None.
-        """
-
-        # Store the style for the speed text
         self.style = style
 
-        # Call the superclass constructor
         super().__init__()
 
     def render(self, task: Task) -> Text:
-        """
-        Render the speed column with custom styling.
-
-        This method retrieves the base speed text from the superclass,
-        applies the custom style if provided, and returns the styled text.
-
-        Args:
-            task (Task): The task for which the speed is being rendered.
-
-        Returns:
-            Text: The rendered speed text with optional custom styling.
-        """
-
-        # Get the base speed text from the superclass
         speed_text = super().render(task)
 
-        # Apply custom style if specified
         if self.style:
             speed_text.stylize(self.style)
 
-        # Return the styled speed text
         return speed_text
 
 
@@ -118,105 +68,51 @@ class CustomTimeColumn(ProgressColumn):
         separator: str | None = None,
         separator_style: str | None = None,
     ) -> None:
-        """
-        Initialize the CustomTimeColumn instance.
-
-        This class is used as a column in the progress bar to display the elapsed and remaining time.
-
-        Args:
-            elapsed_style (str, optional): The style to use for the elapsed time. Defaults to "white".
-            remaining_style (str | None, optional): The style to use for the remaining time. Defaults to None.
-            parentheses_style (str | None, optional): The style to use for parentheses. Defaults to None.
-            separator (str | None, optional): Text to separate elapsed and remaining time. Only included if not None. Defaults to None.
-            separator_style (str | None, optional): The style to use for separator. If None and separator is not None, uses elapsed_style. Defaults to None.
-        """
-
-        # Store the styles for the elapsed and remaining times
         self.elapsed_style: str = elapsed_style
         self.remaining_style: str | None = remaining_style
         self.parentheses_style: str | None = parentheses_style
         self.separator: str | None = separator
         self.separator_style: str | None = separator_style or elapsed_style if separator else None
 
-        # Initialize the CustomTimeColumn instance
         super().__init__()
 
     def _format_time(self, seconds: float | None) -> str:
-        """Format seconds into a human-readable string.
-
-        Args:
-            seconds (float | None): Number of seconds to format. If None or negative, returns '0s'.
-
-        Returns:
-            str: Formatted time string (e.g., '1h2m3s', '5m30s', '45s').
-
-        This function takes a number of seconds and formats it into a human-readable string.
-        If the input is None or negative, it returns '0s'.
-        """
-
-        # If the input is None or negative, return '0s'
         if seconds is None or seconds < 0:
             return "0s"
 
-        # Calculate the days, hours, minutes, and seconds
         days, remainder = divmod(int(seconds), 86400)
         hours, remainder = divmod(remainder, 3600)
         minutes, seconds = divmod(remainder, 60)
 
-        # Initialize an empty list to store the time parts
         parts: list[str] = []
 
-        # If the number of days is greater than 0, add it to the parts list
         if days > 0:
             parts.append(f"{days}d")
-        # If the number of hours is greater than 0, add it to the parts list
         if hours > 0:
             parts.append(f"{hours}h")
-        # If the number of minutes is greater than 0, add it to the parts list
         if minutes > 0:
             parts.append(f"{minutes}m")
-        # If the number of seconds is greater than 0 or if the parts list is empty, add it to the parts list
         if seconds > 0 or not parts:
             parts.append(f"{seconds}s")
 
-        # Join the parts list into a single string and return it
         return "".join(parts)
 
     def render(self, task: Task) -> Text:
-        """
-        Render the time column.
-
-        This method formats the elapsed time and estimated remaining time for a
-        progress task and returns a Text object containing the formatted string.
-
-        Args:
-            task (Task): The progress task containing timing information.
-
-        Returns:
-            Text: A Text object containing the formatted time string.
-        """
-
-        # Get the elapsed and remaining times
         elapsed: float | None = task.finished_time if task.finished else task.elapsed
         remaining: float | None = task.time_remaining
 
-        # Format the times
         elapsed_str: str = self._format_time(elapsed)
         remaining_str: str = self._format_time(remaining)
 
-        # Create Text objects with different styles
         result = Text()
 
-        # Add elapsed time
         result.append(f"{elapsed_str} elapsed", style=self.elapsed_style)
 
-        # Add separator if provided
         if self.separator:
             result.append(f" {self.separator} ", style=self.separator_style)
-        elif self.remaining_style:  # Add space if no separator but has remaining time
+        elif self.remaining_style:
             result.append(" ")
 
-        # Add remaining time with or without parentheses
         if self.remaining_style:
             if self.parentheses_style:
                 result.append("(", style=self.parentheses_style)
@@ -226,22 +122,20 @@ class CustomTimeColumn(ProgressColumn):
             if self.parentheses_style:
                 result.append(")", style=self.parentheses_style)
 
-        # Return the rendered Text object
         return result
 
 
 def bool_to_yes_no(value: bool) -> Literal["yes", "no"]:
     """
-    Convert boolean value to 'yes' or 'no' string.
+    Convert a boolean value to a string value of "yes" or "no".
 
     Args:
-        value (bool): The boolean value to be converted.
+        value (bool): The boolean value to convert.
 
     Returns:
-        Literal["yes", "no"]: The converted string ('yes' or 'no').
+        Literal["yes", "no"]: The string representation of the value.
     """
 
-    # Return 'yes' if the boolean value is True, otherwise return 'no'
     return "yes" if value else "no"
 
 
@@ -259,123 +153,107 @@ def calculate_connections(file_size: int, connection_speed: float) -> int:
     conn = β * log2(1 + S / M) * sqrt(V / 100)
 
     Where:
-    - S: File size in MB
-    - V: Connection speed in Mbps
-    - M: Base size factor (1 MB)
+    - S: File size in megabytes
+    - V: Connection speed in megabits per second
+    - M: Base size factor (1 megabyte)
     - β: Dynamic coefficient (5.6)
+
+    The formula is designed to provide a good balance between using multiple connections
+    to increase download speed and not overloading the system with too many connections.
 
     Args:
         file_size (int): The size of the file in bytes.
-        connection_speed (float): Your connection speed in Mbps.
+        connection_speed (float): Your connection speed in Mbps (megabits per second).
 
     Returns:
         int: The estimated optimal number of connections, capped between 2 and 24.
     """
 
+    if file_size <= 2 * (1024 * 1024):  # If the file size is less than or equal to 2 MB
+        return 2
+
     # Convert file size from bytes to megabytes
     file_size_mb = file_size / (1024 * 1024)
 
     # Dynamic coefficient for connection calculation
+    # The value of 5.6 is chosen to balance the number of connections with the system resources
     beta = 5.6
 
-    # Base size factor in MB
+    # Base size factor in megabytes
+    # The value of 1 is chosen to provide a good balance between the file size and the number of connections
     base_size = 1.0
 
     # Calculate the number of connections using the formula
-    conn_float = beta * log2(1 + file_size_mb / base_size) * sqrt(connection_speed / 100)
+    # The formula is designed to provide a good balance between using multiple connections to increase download speed and not overloading the system with too many connections
+    conn_float = beta * (log2(1 + file_size_mb / base_size) * sqrt(connection_speed / 100))
 
     # Ensure the number of connections is within the allowed range
+    # The number of connections should be at least 2 to take advantage of multiple connections and should not exceed 24 to avoid overloading the system
     return max(2, min(24, ceil(conn_float)))
 
 
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=6), reraise=True)
 def fetch_file_info(url: str, httpx_client: Client) -> dict[str, str | int] | None:
     """
-    Get information about the file to be downloaded.
-
-    This method sends a HEAD request to the provided URL and retrieves the file size, mimetype, and filename from the response headers.
-    It will retry the request up to 3 times if it fails.
+    Fetch file information from the provided URL using an HTTP HEAD request.
 
     Args:
-        url (str): The URL of the file to be downloaded.
-        httpx_client (Client): The HTTPX client to use for the request.
+        url (str): The URL of the file to fetch information for.
+        httpx_client (Client): An instance of httpx.Client to perform the HTTP request.
 
     Returns:
-        dict[str, str | int] | None: A dictionary containing the file size, mimetype, and filename, or None if the request fails.
+        dict[str, str | int] | None: A dictionary containing the file information, including URL, size, mimetype, and filename. Returns None if a RemoteProtocolError occurs.
 
     Raises:
-        OnlineRequestError: If the request fails due to an HTTP error.
+        OnlineRequestError: If an HTTPError occurs during the request.
     """
 
     try:
-        # Send a HEAD request to the URL to get the file information
         r = httpx_client.head(url)
     except RemoteProtocolError:
-        # If the request fails due to a remote protocol error, return None
         return None
     except HTTPError as e:
-        # If the request fails due to an HTTP error, raise a OnlineRequestError
         raise OnlineRequestError(f"An error occurred while getting file info: {str(e)}") from e
 
-    # Get the headers from the response
     r_headers = r.headers
 
-    # Get the content length from the headers
+    # Get the content length from headers, default to 0 if not present
     content_length = int(r_headers.get("content-length", 0))
 
-    # Get the content type from the headers
+    # Get the content type from headers, default to 'application/octet-stream' if not present
     content_type = r_headers.get("content-type", "application/octet-stream").split(";")[0].strip()
 
-    # Get the filename from the content disposition header
+    # Get the content disposition from headers to extract the filename
     content_disposition = r_headers.get("content-disposition")
     filename = None
 
     if content_disposition:
+        # RFC 5987 encoding for the filename
         if "filename*=" in content_disposition:
             filename = content_disposition.split("filename*=")[-1].split("'")[-1]
+        # Standard encoding for the filename
         elif "filename=" in content_disposition:
             filename = content_disposition.split("filename=")[-1].strip("\"'")
 
+    # If no filename is found, derive from URL path or use a default name
     if not filename:
-        # If filename is not found, use the URL path as the filename
         filename = Path(unquote(urlparse(url).path)).name or f"unknown_file{guess_mimetype_extension(content_type) or ''}"
 
-    # Return the file information
     return {"url": r.url, "size": content_length, "mimetype": content_type, "filename": filename}
 
 
-def format_size(size_bytes: int) -> str:
-    """
-    Format size in bytes to human readable format.
-
-    This function takes an integer representing a size in bytes and returns a string representation of the size, using the appropriate unit (B, KB, MB, GB, TB).
-
-    Args:
-        size_bytes (int): The size in bytes to format.
-
-    Returns:
-        str: A string representation of the size in bytes, using the appropriate unit (B, KB, MB, GB, TB).
-    """
-
+def format_size(size_bytes: float) -> str:
     if size_bytes == 0:
         return "0.00 B"
 
-    # List of units to use for formatting
     units = ["B", "KB", "MB", "GB", "TB"]
-
-    # Size in bytes as a float
-    size = float(size_bytes)
-
-    # Index of the current unit
     unit_index = 0
 
-    # Divide the size by 1024 until it is less than 1024
-    while size >= 1024.0 and unit_index < len(units) - 1:
-        size /= 1024.0
+    while size_bytes >= 1024.0 and unit_index < len(units) - 1:
+        size_bytes /= 1024.0
         unit_index += 1
 
-    # Format the size with 2 decimal places and the appropriate unit
-    return f"{size:.2f} {units[unit_index]}"
+    return f"{size_bytes:.2f} {units[unit_index]}"
 
 
 def get_chunk_ranges(
@@ -434,71 +312,69 @@ def get_chunk_ranges(
 
 def get_filesystem_type(path: str | Path) -> str | None:
     """
-    Get the type of filesystem at the given path.
+    Get the filesystem type of a path.
 
     Args:
         path (str | Path): The path to get the filesystem type for.
 
     Returns:
-        str | None: The type of filesystem at the path, or None if the path is invalid.
+        str | None: The filesystem type or None if the path is not a directory or does not exist.
     """
 
-    # Convert path to Path object
     path = Path(path).resolve()
 
-    # Find the partition that the path is on, based on the mountpoint
+    # Get the best matching mount point
     best_part = max(
         (part for part in disk_partitions(all=True) if path.as_posix().startswith(part.mountpoint)),
         key=lambda part: len(part.mountpoint),
         default=None,
     )
 
-    # Return the filesystem type of the partition
+    # Return the filesystem type if the best match is not None
     return best_part.fstype if best_part else None
 
 
 def has_available_space(path: str | PathLike, required_size: int, minimum_space: int = 1) -> bool:
     """
-    Check if there is sufficient space available at the specified path.
+    Check if a path has enough free space to write a file of the given size.
 
     Args:
-        path (str | PathLike): The file or directory path to check for available space.
-        required_size (int): The size of the file or data to be stored, in bytes.
-        minimum_space (int): The minimum additional space to ensure, in gigabytes. Defaults to 1.
+        path: The path to the file or directory to check.
+        required_size: The minimum free space required in bytes.
+        minimum_space: The minimum free space required in gigabytes (GB). Defaults to 1.
 
     Returns:
-        bool: True if there is enough available space, False otherwise.
+        True if the path has enough free space, False otherwise.
     """
 
-    # Convert path to Path object
     path = Path(path)
 
-    # Calculate the total required space including the minimum space buffer
+    # Calculate the required space in bytes
     required_space = required_size + (minimum_space * 1024 * 1024 * 1024)
 
-    # Get the disk usage statistics for the appropriate path (parent if it's a file or doesn't exist)
+    # Get the disk usage for the parent directory
     disk_usage_obj = disk_usage(path.parent.as_posix() if path.is_file() or not path.exists() else path.as_posix())
 
-    # Return True if there is enough free space, False otherwise
+    # Return True if the path has enough free space
     return bool(disk_usage_obj.free >= required_space)
 
 
 def looks_like_a_ram_directory(path: str | Path) -> bool:
     """
-    Check if a path is a temporary RAM-backed filesystem.
+    Check if the given path is a temporary RAM-based filesystem.
 
     Args:
-        path (str | Path): The path to check.
+        path: The path to check.
 
     Returns:
-        bool: True if the path is a temporary RAM-backed filesystem, False otherwise.
+        True if the path is a RAM-based filesystem, False otherwise.
     """
 
-    # List of known RAM-backed filesystems
+    # The following filesystem types are known to be RAM-based
     ram_filesystems = {"tmpfs", "ramfs", "devtmpfs"}
 
-    # Get the filesystem type of the path
+    # Get the filesystem type of the given path
     filesystem_type = get_filesystem_type(path)
 
-    # Check if the filesystem type is a known RAM-backed filesystem
+    # Return True if the path is a RAM-based filesystem
     return filesystem_type in ram_filesystems
