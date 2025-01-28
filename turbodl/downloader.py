@@ -117,11 +117,7 @@ class TurboDL:
     """A class for downloading direct download URLs."""
 
     def __init__(
-        self,
-        max_connections: int | str | Literal["auto"] = "auto",
-        connection_speed: float = 80,
-        show_progress_bars: bool = True,
-        custom_headers: dict[str, Any] | None = None,
+        self, max_connections: int | str | Literal["auto"] = "auto", connection_speed: float = 80, show_progress_bars: bool = True
     ) -> None:
         """
         Initialize the class with the required settings for downloading a file.
@@ -133,12 +129,6 @@ class TurboDL:
             connection_speed (float): Your connection speed in Mbps (megabits per second). Defaults to 80.
                 - Your connection speed will be used to help calculate the optimal number of connections.
             show_progress_bars (bool): Show or hide all progress bars. Defaults to True.
-            custom_headers (dict[str, Any] | None): Custom headers to include in the request. If None, default headers will be used. Defaults to None.
-                - Immutable headers are (case-insensitive):
-                    - 'Accept-Encoding': 'identity'
-                    - 'Range': ...
-                    - 'Connection': ...
-                - All other headers will be included in the request.
 
         Raises:
             InvalidArgumentError: If max_connections is not 'auto' or an integer between 1 and 32, or if connection_speed is not positive.
@@ -152,13 +142,6 @@ class TurboDL:
         self._connection_speed: float = connection_speed
         self._show_progress_bars: bool = show_progress_bars
 
-        # Create a dictionary with default headers and update it with custom headers
-        self._custom_headers: dict[str, Any] = {
-            "Accept": "*/*",
-            "Accept-Encoding": "identity",
-            "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36",
-        }
-
         # Validate the arguments
         if isinstance(self._max_connections, str) and self._max_connections.isdigit():
             self._max_connections = int(self._max_connections)
@@ -169,16 +152,10 @@ class TurboDL:
         if self._connection_speed <= 0:
             raise InvalidArgumentError(f"connection_speed must be positive: {self._connection_speed}")
 
-        if custom_headers:
-            for key, value in custom_headers.items():
-                if key.title() not in {"Accept-Encoding", "Range", "Connection"}:
-                    self._custom_headers[key.title()] = value
-
         # Create a client with the custom headers and settings
         self._client: Client = Client(
-            headers=self._custom_headers,
-            follow_redirects=True,
             verify=True,
+            follow_redirects=True,
             limits=Limits(max_connections=48, max_keepalive_connections=24, keepalive_expiry=10),
         )
 
@@ -186,7 +163,7 @@ class TurboDL:
         self.output_path: str | None = None
 
     @retry(stop=stop_after_attempt(5), wait=wait_exponential(multiplier=2, min=1, max=10), reraise=True)
-    def _download_chunk(self, url: str, start: int, end: int, progress: Progress, task_id: int) -> bytes:
+    def _download_chunk(self, url: str, start: int, end: int, progress: Progress, task_id: int, headers: dict[str, Any]) -> bytes:
         """
         Download a chunk of a file from the provided URL.
 
@@ -199,6 +176,7 @@ class TurboDL:
             end (int): The end index of the chunk.
             progress (Progress): The progress bar to update.
             task_id (int): The task ID of the progress bar.
+            headers (dict[str, Any]): The headers to include in the request.
 
         Returns:
             bytes: The downloaded chunk as bytes.
@@ -208,8 +186,6 @@ class TurboDL:
         """
 
         # Set the Range header to the start and end indices of the chunk
-        headers = {**self._custom_headers}
-
         if end > 0:
             headers["Range"] = f"bytes={start}-{end}"
 
@@ -275,6 +251,7 @@ class TurboDL:
         total_size: int,
         progress: Progress,
         task_id: int,
+        headers: dict[str, Any],
         output_path: str | PathLike,
     ) -> None:
         """
@@ -288,6 +265,7 @@ class TurboDL:
             total_size (int): The total size of the file in bytes.
             progress (Progress): The progress bar to update.
             task_id (int): The task ID of the progress bar.
+            headers (dict[str, Any]): The headers to include in the request.
             output_path (str | PathLike): The path to save the downloaded file to.
 
         Raises:
@@ -296,9 +274,6 @@ class TurboDL:
 
         # Initialize the chunk buffer
         chunk_buffers[chunk_id] = ChunkBuffer()
-
-        # Set the range header
-        headers = {**self._custom_headers}
 
         if end > 0:
             headers["Range"] = f"bytes={start}-{end}"
@@ -331,7 +306,7 @@ class TurboDL:
             raise DownloadError(f"An error occurred while downloading chunk: {e}") from e
 
     def _download_with_buffer(
-        self, url: str, output_path: str | PathLike, total_size: int, progress: Progress, task_id: int
+        self, url: str, output_path: str | PathLike, total_size: int, progress: Progress, task_id: int, headers: dict[str, Any]
     ) -> None:
         """
         Download a file from the provided URL to the output file path using a buffer.
@@ -345,6 +320,7 @@ class TurboDL:
             total_size (int): The total size of the file in bytes.
             progress (Progress): The progress bar to update.
             task_id (int): The task ID of the progress bar.
+            headers (dict[str, Any]): The headers to include in the request.
         """
 
         # Get the chunk ranges
@@ -369,13 +345,75 @@ class TurboDL:
                     total_size,
                     progress,
                     task_id,
+                    headers,
                     output_path,
                 )
                 for i, (start, end) in enumerate(ranges)
             ]:
                 future.result()
 
-    def _download_direct(self, url: str, output_path: str | PathLike, total_size: int, progress: Progress, task_id: int) -> None:
+    def _download_direct_download_worker(
+        self,
+        url: str,
+        output_path: str | PathLike,
+        progress: Progress,
+        task_id: int,
+        start: int,
+        end: int,
+        headers: dict[str, Any],
+    ) -> None:
+        """
+        Download a chunk of the file and write it to the output file.
+
+        This function is designed to be used with the ThreadPoolExecutor to download chunks concurrently.
+        It will raise a DownloadError if any exception occurs during download.
+
+        Args:
+            url (str): The URL of the file to be downloaded.
+            output_path (str | PathLike): The path to save the downloaded file to.
+            progress (Progress): The progress bar to update.
+            task_id (int): The task ID of the progress bar.
+            start (int): The start byte index of the chunk.
+            end (int): The end byte index of the chunk.
+            headers (dict[str, Any]): The headers to include in the request.
+
+        Raises:
+            DownloadError: If any exception occurs during download.
+        """
+
+        # Initialize a lock for writing to the file
+        write_lock = Lock()
+
+        # Set the Range header for the request
+        if end > 0:
+            headers["Range"] = f"bytes={start}-{end}"
+
+        try:
+            # Stream the file chunk from the server
+            with self._client.stream("GET", url, headers=headers) as r:
+                # Raise an exception if the response status code is not 200
+                r.raise_for_status()
+
+                # Iterate over the response and write the chunk to the file
+                for data in r.iter_bytes(chunk_size=1024 * 1024):
+                    chunk_len = len(data)
+
+                    # Acquire the write lock and open the output file in read-write mode
+                    with write_lock, Path(output_path).open("r+b") as fo:
+                        # Seek to the start of the chunk and write the data
+                        fo.seek(start)
+                        fo.write(data)
+                        start += chunk_len
+
+                    # Update the progress bar
+                    progress.update(TaskID(task_id), advance=chunk_len)
+        except Exception as e:
+            # Raise a DownloadError if any exception occurs during download
+            raise DownloadError(f"An error occurred while downloading chunk: {e}") from e
+
+    def _download_direct(
+        self, url: str, output_path: str | PathLike, total_size: int, progress: Progress, task_id: int, headers: dict[str, Any]
+    ) -> None:
         """
         Download a file from the provided URL directly to the output file path.
 
@@ -388,64 +426,21 @@ class TurboDL:
             total_size (int): The total size of the file in bytes.
             progress (Progress): The progress bar to update.
             task_id (int): The task ID of the progress bar.
+            headers (dict[str, Any]): The headers to include in the request.
         """
-
-        # Initialize a lock for writing to the file
-        write_lock = Lock()
 
         # List to store future objects from the ThreadPoolExecutor
         futures = []
-
-        def download_worker(start: int, end: int) -> None:
-            """
-            Download a chunk of the file and write it to the output file.
-
-            This function is designed to be used with the ThreadPoolExecutor to download chunks concurrently.
-            It will raise a DownloadError if any exception occurs during download.
-
-            Args:
-                start (int): The start byte index of the chunk.
-                end (int): The end byte index of the chunk.
-
-            Raises:
-                DownloadError: If any exception occurs during download.
-            """
-
-            # Set the Range header for the request
-            headers = {**self._custom_headers}
-
-            if end > 0:
-                headers["Range"] = f"bytes={start}-{end}"
-
-            try:
-                # Stream the file chunk from the server
-                with self._client.stream("GET", url, headers=headers) as r:
-                    # Raise an exception if the response status code is not 200
-                    r.raise_for_status()
-
-                    # Iterate over the response and write the chunk to the file
-                    for data in r.iter_bytes(chunk_size=1024 * 1024):
-                        chunk_len = len(data)
-
-                        # Acquire the write lock and open the output file in read-write mode
-                        with write_lock, Path(output_path).open("r+b") as fo:
-                            # Seek to the start of the chunk and write the data
-                            fo.seek(start)
-                            fo.write(data)
-                            start += chunk_len
-
-                        # Update the progress bar
-                        progress.update(TaskID(task_id), advance=chunk_len)
-            except Exception as e:
-                # Raise a DownloadError if any exception occurs during download
-                raise DownloadError(f"An error occurred while downloading chunk: {e}") from e
 
         # Get the chunk ranges for the download
         ranges = get_chunk_ranges(total_size, self._max_connections, self._connection_speed)
 
         # Use ThreadPoolExecutor to download chunks concurrently
         with ThreadPoolExecutor(max_workers=len(ranges)) as executor:
-            futures = [executor.submit(download_worker, start, end) for start, end in ranges]
+            futures = [
+                executor.submit(self._download_direct_download_worker, url, output_path, progress, task_id, start, end, headers)
+                for start, end in ranges
+            ]
 
             # Wait for all futures to complete
             for future in futures:
@@ -458,6 +453,7 @@ class TurboDL:
         pre_allocate_space: bool = False,
         use_ram_buffer: bool | Literal["auto"] = "auto",
         overwrite: bool = True,
+        headers: dict[str, Any] | None = None,
         timeout: int | None = None,
         expected_hash: str | None = None,
         hash_type: Literal[
@@ -486,6 +482,12 @@ class TurboDL:
             pre_allocate_space (bool): Whether to pre-allocate space for the file, useful to avoid disk fragmentation. Defaults to False.
             use_ram_buffer (bool | str | Literal["auto"]): Whether to use a RAM buffer to download the file. If True, the file will be downloaded with the help of a RAM buffer. If False, the file will be downloaded directly to the output file path. If 'auto', the RAM buffer will be used if the output path is not a RAM directory. Defaults to 'auto'.
             overwrite (bool): Overwrite the file if it already exists. Otherwise, a '_1', '_2', etc. suffix will be added. Defaults to True.
+            headers (dict[str, Any] | None): Custom headers to include in the request. If None, default headers will be used. Defaults to None.
+                - Immutable headers are (case-insensitive):
+                    - 'Accept-Encoding': 'identity'
+                    - 'Range': ...
+                    - 'Connection': ...
+                - All other headers will be included in the request.
             timeout (int | None): Timeout in seconds for the download process. Or None for no timeout. Default to None.
             expected_hash (str | None): The expected hash of the downloaded file. If not provided, the hash will not be checked. Defaults to None.
             hash_type (str | Literal['md5', 'sha1', 'sha224', 'sha256', 'sha384', 'sha512', 'blake2b', 'blake2s', 'sha3_224', 'sha3_256', 'sha3_384', 'sha3_512', 'shake_128', 'shake_256']): The hash type to use for the hash verification. Defaults to 'md5'.
@@ -498,7 +500,22 @@ class TurboDL:
             OnlineRequestError: If an error occurs while getting file info.
         """
 
-        # Set the timeout
+        # Create a dictionary with default headers and update it with custom headers
+        default_headers: dict[str, Any] = {
+            "Accept": "*/*",
+            "Accept-Encoding": "identity",
+            "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36",
+        }
+
+        if headers:
+            for key, value in headers.items():
+                if key.title() not in {"Accept-Encoding", "Range", "Connection"}:
+                    default_headers[key.title()] = value
+
+        headers = default_headers
+
+        # Set the headers and timeout for the HTTPX client
+        self._client.headers.update(headers)
         self._client.timeout = timeout
 
         # Check if the URL is provided
@@ -520,7 +537,7 @@ class TurboDL:
             use_ram_buffer = not is_ram_directory
 
         # Get the file info from the URL
-        file_info = fetch_file_info(url, self._client, self._custom_headers)
+        file_info = fetch_file_info(url, self._client)
 
         # Handle the case where the file info is not available
         if file_info is None:
@@ -530,6 +547,7 @@ class TurboDL:
             suggested_filename = "unknown_file"
         else:
             has_unknown_info = False
+            url = file_info["url"]
             total_size = int(file_info["size"])
             # mimetype = str(file_info["mimetype"])  # TODO: Use it?
             suggested_filename = str(file_info["filename"])
@@ -609,16 +627,16 @@ class TurboDL:
 
                 # Determine download method based on buffer usage
                 if total_size == 0:
-                    Path(output_path).write_bytes(self._download_chunk(url, 0, 0, progress, task_id))
+                    Path(output_path).write_bytes(self._download_chunk(url, 0, 0, progress, task_id, headers))
                 elif use_ram_buffer:
-                    self._download_with_buffer(url, output_path, total_size, progress, task_id)
+                    self._download_with_buffer(url, output_path, total_size, progress, task_id, headers)
                 else:
-                    self._download_direct(url, output_path, total_size, progress, task_id)
+                    self._download_direct(url, output_path, total_size, progress, task_id, headers)
         except KeyboardInterrupt:
             # Handle download interruption by user
             Path(output_path).unlink(missing_ok=True)
             self.output_path = None
-            return
+            return None
         except Exception as e:
             # Handle any other download exceptions
             raise DownloadError(f"An error occurred while downloading file: {e}") from e
