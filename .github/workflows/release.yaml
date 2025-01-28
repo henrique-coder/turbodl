@@ -48,7 +48,7 @@ jobs:
           VERSION=$(grep -oP '## \[\K[^\]]+' CHANGELOG.md | head -n1)
           EXTRA_TEXT=$(grep -oP '## \[[^\]]+\] - \(\K[^\)]+' CHANGELOG.md | head -n1)
 
-          CHANGES=$(awk '/## \['$VERSION'\]/{flag=1;next}/## \[/{flag=0}flag' CHANGELOG.md | sed 's/####/\n####/g' | sed '1d' | sed 's/^- /\n- /g')
+          CHANGES=$(awk '/## \['$VERSION'\]/{flag=1;next}/## \[/{flag=0}flag' CHANGELOG.md | sed 's/####/\n####/g' | sed '1d' | sed '/^$/N;/^\n$/D')
 
           echo "Version detected: $VERSION"
           echo "Extra text: $EXTRA_TEXT"
@@ -94,7 +94,7 @@ jobs:
         if: steps.check_version.outputs.should_continue == 'true'
         id: contributors_list
         run: |
-          CONTRIBUTORS=$(git log --reverse --format="- [@%aN](https://github.com/%aN)" ${{ steps.previoustag.outputs.tag }}..HEAD | sort -u)
+          CONTRIBUTORS=$(git log --reverse --format="- [@%aN](https://github.com/%aE | cut -d@ -f1)" ${{ steps.previoustag.outputs.tag }}..HEAD | sort -u)
           echo "contributors<<EOF" >> $GITHUB_OUTPUT
           echo "$CONTRIBUTORS" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
