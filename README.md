@@ -52,9 +52,7 @@ from turbodl import TurboDL
 turbodl = TurboDL(
     max_connections="auto",
     connection_speed=80,
-    show_progress_bars=True,
-    custom_headers=None,
-    timeout=None
+    show_progress_bars=True
 )
 turbodl.download(
     url="https://example.com/file.txt",
@@ -62,6 +60,8 @@ turbodl.download(
     pre_allocate_space=False,
     use_ram_buffer="auto",
     overwrite=True,
+    headers=None,
+    timeout=None
     expected_hash=None,
     hash_type="md5",
 )
