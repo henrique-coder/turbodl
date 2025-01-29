@@ -52,7 +52,8 @@ from turbodl import TurboDL
 turbodl = TurboDL(
     max_connections="auto",
     connection_speed=80,
-    show_progress_bars=True
+    show_progress_bars=True,
+    save_logfile=False
 )
 turbodl.download(
     url="https://example.com/file.txt",
