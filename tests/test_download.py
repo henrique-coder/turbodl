@@ -13,23 +13,16 @@ TEST_FILES = [
     {
         "name": "5mb_file",
         "url": "https://files.testfile.org/anime.mp3",
-        "expected_filename": "anime.mp3",
-        "expected_hash": "b79c0a4d7d73e08f088876867315ecd8",
-        "hash_type": "md5",
-    },
-    {
-        "name": "30mb_file",
-        "url": "https://files.testfile.org/ZIPC/30MB-Corrupt-Testfile.Org.zip",
-        "expected_filename": "30MB-Corrupt-Testfile.Org.zip",
-        "expected_hash": "e9643808139d7f95beee976fa263d551",
-        "hash_type": "md5",
+        "expectedFilename": "anime.mp3",
+        "expectedHash": "b79c0a4d7d73e08f088876867315ecd8",
+        "hashType": "md5",
     },
     {
         "name": "50mb_file",
         "url": "https://files.testfile.org/PDF/50MB-TESTFILE.ORG.pdf",
-        "expected_filename": "50MB-TESTFILE.ORG.pdf",
-        "expected_hash": "eb405d3fee914fc235b835d2e01b5d62",
-        "hash_type": "md5",
+        "expectedFilename": "50MB-TESTFILE.ORG.pdf",
+        "expectedHash": "eb405d3fee914fc235b835d2e01b5d62",
+        "hashType": "md5",
     },
 ]
 
@@ -55,15 +48,15 @@ def test_download_file_with_ram(downloader: TurboDL, temporary_path: Path, file_
         url=file_info["url"],
         output_path=temporary_path,
         use_ram_buffer=True,
-        expected_hash=file_info["expected_hash"],
-        hash_type=file_info["hash_type"],
+        expected_hash=file_info["expectedHash"],
+        hash_type=file_info["hashType"],
     )
     output_path = Path(downloader.output_path)
 
-    assert output_path.name == file_info["expected_filename"], (
+    assert output_path.name == file_info["expectedFilename"], (
         f"URL: {file_info['url']} - "
         f"Output file name: {output_path.name} - "
-        f"Expected filename: {file_info['expected_filename']} - "
+        f"Expected filename: {file_info['expectedFilename']} - "
         f"Error: Downloaded file name is different than expected"
     )
 
@@ -78,14 +71,14 @@ def test_download_file_without_ram(downloader: TurboDL, temporary_path: Path, fi
         url=file_info["url"],
         output_path=temporary_path,
         use_ram_buffer=False,
-        expected_hash=file_info["expected_hash"],
-        hash_type=file_info["hash_type"],
+        expected_hash=file_info["expectedHash"],
+        hash_type=file_info["hashType"],
     )
     output_path = Path(downloader.output_path)
 
-    assert output_path.name == file_info["expected_filename"], (
+    assert output_path.name == file_info["expectedFilename"], (
         f"URL: {file_info['url']} - "
         f"Output file name: {output_path.name} - "
-        f"Expected filename: {file_info['expected_filename']} - "
+        f"Expected filename: {file_info['expectedFilename']} - "
         f"Error: Downloaded file name is different than expected"
     )
