@@ -23,13 +23,31 @@ class CustomDownloadColumn(DownloadColumn):
     """
 
     def __init__(self, style: str | None = None) -> None:
+        """
+        Initialize the class.
+
+        Args:
+            style (str | None): The style to apply to the rendered text. If None, the default style will be used.
+        """
+
         self.style = style
 
         super().__init__()
 
     def render(self, task: Task) -> Text:
+        """
+        Render the download speed.
+
+        Args:
+            task (Task): The task to render the download speed for.
+
+        Returns:
+            Text: The rendered download speed with the custom style applied.
+        """
+
         download_text = super().render(task)
 
+        # Apply the custom style if provided
         if self.style:
             download_text.stylize(self.style)
 
@@ -42,16 +60,41 @@ class CustomSpeedColumn(TransferSpeedColumn):
     """
 
     def __init__(self, style: str | None = None) -> None:
+        """
+        Initialize the class with optional styling.
+
+        Args:
+            style (str | None): The style to apply. If None, the default style will be used.
+        """
+
+        # Set the style attribute
         self.style = style
 
+        # Call the parent class initializer
         super().__init__()
 
     def render(self, task: Task) -> Text:
+        """
+        Render the transfer speed.
+
+        This method takes a Task as an argument, renders the transfer speed
+        using the parent class, and then applies the custom style if provided.
+
+        Args:
+            task (Task): The task to render the transfer speed for.
+
+        Returns:
+            Text: The rendered transfer speed with the custom style applied.
+        """
+
+        # Get the transfer speed text from the parent class
         speed_text = super().render(task)
 
+        # If a custom style is provided, apply it to the text
         if self.style:
             speed_text.stylize(self.style)
 
+        # Return the rendered text
         return speed_text
 
 
@@ -68,6 +111,17 @@ class CustomTimeColumn(ProgressColumn):
         separator: str | None = None,
         separator_style: str | None = None,
     ) -> None:
+        """
+        Initialize the custom time column with the specified styles.
+
+        Args:
+            elapsed_style (str, optional): The style to apply to the elapsed time. Defaults to 'white'.
+            remaining_style (str | None, optional): The style to apply to the remaining time. If None, the style will be the same as the elapsed style. Defaults to None.
+            parentheses_style (str | None, optional): The style to apply to the parentheses around the remaining time. If None, the style will be the same as the elapsed style. Defaults to None.
+            separator (str | None, optional): The separator to use between the elapsed and remaining times. If None, no separator will be used. Defaults to None.
+            separator_style (str | None, optional): The style to apply to the separator. If None, the style will be the same as the elapsed style. Defaults to None.
+        """
+
         self.elapsed_style: str = elapsed_style
         self.remaining_style: str | None = remaining_style
         self.parentheses_style: str | None = parentheses_style
@@ -77,51 +131,106 @@ class CustomTimeColumn(ProgressColumn):
         super().__init__()
 
     def _format_time(self, seconds: float | None) -> str:
+        """
+        Format the given time in seconds as a string.
+
+        The time is formatted as a string with the following format:
+        <days>d<hours>h<minutes>m<seconds>s
+
+        If the time is negative or None, the string "0s" is returned.
+
+        Args:
+            seconds (float | None): The time in seconds to format.
+
+        Returns:
+            str: The formatted time string.
+        """
+
         if seconds is None or seconds < 0:
             return "0s"
 
+        # Calculate the number of days, hours, minutes and seconds
         days, remainder = divmod(int(seconds), 86400)
         hours, remainder = divmod(remainder, 3600)
         minutes, seconds = divmod(remainder, 60)
 
+        # Create a list of strings to represent the time
         parts: list[str] = []
 
+        # Add the number of days to the list if there are any
         if days > 0:
             parts.append(f"{days}d")
+
+        # Add the number of hours to the list if there are any
         if hours > 0:
             parts.append(f"{hours}h")
+
+        # Add the number of minutes to the list if there are any
         if minutes > 0:
             parts.append(f"{minutes}m")
+
+        # Add the number of seconds to the list if there are any
+        # or if there are no other time units
         if seconds > 0 or not parts:
             parts.append(f"{seconds}s")
 
+        # Join the list of strings and return the result
         return "".join(parts)
 
     def render(self, task: Task) -> Text:
+        """
+        Render the time elapsed and remaining as a string.
+
+        This method takes a Task object as an argument and renders the time
+        elapsed and remaining as a string. It uses the _format_time method to
+        format the time values and the render method to render the text.
+
+        Args:
+            task (Task): The task to render the time for.
+
+        Returns:
+            Text: The rendered text with the elapsed and remaining time.
+        """
+
+        # Get the elapsed time
         elapsed: float | None = task.finished_time if task.finished else task.elapsed
+
+        # Get the remaining time
         remaining: float | None = task.time_remaining
 
+        # Format the elapsed time
         elapsed_str: str = self._format_time(elapsed)
+
+        # Format the remaining time
         remaining_str: str = self._format_time(remaining)
 
+        # Create the result text
         result = Text()
 
+        # Add the elapsed time to the result
         result.append(f"{elapsed_str} elapsed", style=self.elapsed_style)
 
+        # If there is a separator, add it
         if self.separator:
             result.append(f" {self.separator} ", style=self.separator_style)
+        # Otherwise, add a space
         elif self.remaining_style:
             result.append(" ")
 
+        # If there is a remaining time, add it
         if self.remaining_style:
+            # If there are parentheses, add them
             if self.parentheses_style:
                 result.append("(", style=self.parentheses_style)
 
+            # Add the remaining time
             result.append(f"{remaining_str} remaining", style=self.remaining_style)
 
+            # If there are parentheses, close them
             if self.parentheses_style:
                 result.append(")", style=self.parentheses_style)
 
+        # Return the result
         return result
 
 
