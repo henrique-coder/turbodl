@@ -87,6 +87,7 @@ def download(
     hide_progress_bars: bool = Option(
         False, "--hide-progress-bars", "-hpb", help="Hide progress bars (shown by default).", is_flag=True
     ),
+    save_logfile: bool = Option(False, "--save-logfile", "-sl", help="Save log messages to a file.", is_flag=True),
     allocate_space: bool = Option(
         False, "--pre-allocate-space", "-pas", help="Pre-allocate disk space before downloading.", is_flag=True
     ),
@@ -109,9 +110,13 @@ def download(
     ram_buffer_value, show_progress_bars, pre_allocate_space, overwrite = process_buffer_options(
         auto_ram_buffer, use_ram_buffer, no_ram_buffer, hide_progress_bars, allocate_space, no_overwrite
     )
+
     try:
         turbodl = TurboDL(
-            max_connections=max_connections, connection_speed=connection_speed, show_progress_bars=show_progress_bars
+            max_connections=max_connections,
+            connection_speed=connection_speed,
+            show_progress_bars=show_progress_bars,
+            save_logfile=save_logfile,
         )
         turbodl.download(
             url=url,
