@@ -239,7 +239,7 @@ def fetch_file_info(url: str, httpx_client: Client) -> dict[str, str | int] | No
     if not filename:
         filename = Path(unquote(urlparse(url).path)).name or f"unknown_file{guess_mimetype_extension(content_type) or ''}"
 
-    return {"url": r.url, "size": content_length, "mimetype": content_type, "filename": filename}
+    return {"url": r.url.__str__(), "size": content_length, "mimetype": content_type, "filename": filename}
 
 
 def format_size(size_bytes: float) -> str:
