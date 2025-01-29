@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.3.2] - (New Features & Bug Fixes)
+#### Changed
+- Refactored and simplified several docstrings
+
+#### Added
+- Smart retry system for downloads and connections
+- Added a new logger system
+- Added logger option (--save-logfile) to CLI
+
+#### Removed
+- Removed unnecessary docstrings from internal functions
+
+#### Fixed
+- Fixed release workflow
+
 ## [0.3.1] - (Bug Fixes & Performance Improvements)
 #### Changed
 - Overall code structure and organization
@@ -50,29 +65,118 @@
 - Multiple linting-related fixes
 
 ## [0.2.0] - ()
+#### Changed
+
+#### Added
+
+#### Removed
+
+#### Fixed
 
 ## [0.1.8] - ()
+#### Changed
+
+#### Added
+
+#### Removed
+
+#### Fixed
 
 ## [0.1.7] - ()
+#### Changed
+
+#### Added
+
+#### Removed
+
+#### Fixed
 
 ## [0.1.6] - ()
+#### Changed
+
+#### Added
+
+#### Removed
+
+#### Fixed
 
 ## [0.1.5] - ()
+#### Changed
+
+#### Added
+
+#### Removed
+
+#### Fixed
 
 ## [0.1.4] - ()
+#### Changed
+
+#### Added
+
+#### Removed
+
+#### Fixed
 
 ## [0.1.3] - ()
+#### Changed
+
+#### Added
+
+#### Removed
+
+#### Fixed
 
 ## [0.1.2] - ()
+#### Changed
+
+#### Added
+
+#### Removed
+
+#### Fixed
 
 ## [0.1.1] - ()
+#### Changed
+
+#### Added
+
+#### Removed
+
+#### Fixed
 
 ## [0.1.0] - ()
+#### Changed
+
+#### Added
+
+#### Removed
+
+#### Fixed
 
 ## [0.0.3] - ()
+#### Changed
+
+#### Added
+
+#### Removed
+
+#### Fixed
 
 ## [0.0.2] - ()
+#### Changed
+
+#### Added
+
+#### Removed
+
+#### Fixed
 
 ## [0.0.1] - (Initial Release)
+#### Changed
+
 #### Added
-- Added project files
+
+#### Removed
+
+#### Fixed
