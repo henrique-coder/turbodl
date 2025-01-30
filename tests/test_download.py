@@ -47,7 +47,7 @@ def test_download_file_with_ram(downloader: TurboDL, temporary_path: Path, file_
     downloader.download(
         url=file_info["url"],
         output_path=temporary_path,
-        use_ram_buffer=True,
+        enable_ram_buffer=True,
         expected_hash=file_info["expectedHash"],
         hash_type=file_info["hashType"],
     )
@@ -70,7 +70,7 @@ def test_download_file_without_ram(downloader: TurboDL, temporary_path: Path, fi
     downloader.download(
         url=file_info["url"],
         output_path=temporary_path,
-        use_ram_buffer=False,
+        enable_ram_buffer=False,
         expected_hash=file_info["expectedHash"],
         hash_type=file_info["hashType"],
     )
