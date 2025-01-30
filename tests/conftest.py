@@ -16,7 +16,7 @@ def downloader() -> TurboDL:
     Return a configured TurboDL instance.
     """
 
-    return TurboDL(max_connections="auto", connection_speed=500, show_progress_bars=True, save_logfile=False)
+    return TurboDL(max_connections="auto", connection_speed_mbps=1000, show_progress_bar=True, save_log_file=False)
 
 
 @fixture
