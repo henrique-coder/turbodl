@@ -2,23 +2,23 @@
 from importlib.metadata import version
 
 # Local imports
-from .downloader import TurboDL
+from .core import TurboDL
 from .exceptions import (
     DownloadError,
     HashVerificationError,
-    InsufficientSpaceError,
     InvalidArgumentError,
+    NotEnoughSpaceError,
     OnlineRequestError,
     TurboDLError,
 )
 
 __all__: list[str] = [
+    "TurboDL",
     "DownloadError",
     "HashVerificationError",
-    "InsufficientSpaceError",
     "InvalidArgumentError",
+    "NotEnoughSpaceError",
     "OnlineRequestError",
-    "TurboDL",
     "TurboDLError",
 ]
 __version__ = version("turbodl")

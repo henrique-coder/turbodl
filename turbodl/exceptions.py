@@ -22,7 +22,7 @@ class HashVerificationError(TurboDLError):
     pass
 
 
-class InsufficientSpaceError(TurboDLError):
+class NotEnoughSpaceError(TurboDLError):
     """
     Exception raised when there is not enough space to download the file.
     """

@@ -4,8 +4,7 @@ from rich.console import Console
 from typer import Argument, Exit, Option, Typer
 
 # Local imports
-from turbodl import __version__
-from turbodl.downloader import TurboDL
+from turbodl import TurboDL, __version__
 from turbodl.exceptions import TurboDLError
 
 
@@ -82,12 +81,12 @@ def download(
     output_path: str = Argument(
         None, help="Destination path. If directory, filename is derived from server response.", show_default="Current directory"
     ),
-    max_connections: str = Option("auto", "--max-connections", "-mc", help="Max connections: 'auto' or integer (1-24)."),
-    connection_speed: float = Option(80, "--connection-speed", "-cs", help="Connection speed in Mbps for optimal connections."),
-    hide_progress_bars: bool = Option(
-        False, "--hide-progress-bars", "-hpb", help="Hide progress bars (shown by default).", is_flag=True
+    max_connections: str = Option("auto", "--max-connections", "-mc", help="Max connections: 'auto' or integer (1-32)."),
+    connection_speed_mbps: float = Option(80, "--connection-speed", "-cs", help="Connection speed in Mbps for optimal connections."),
+    hide_progress_bar: bool = Option(
+        False, "--hide-progress-bar", "-hpb", help="Hide progress bar (shown by default).", is_flag=True
     ),
-    save_logfile: bool = Option(False, "--save-logfile", "-sl", help="Save log messages to a file.", is_flag=True),
+    save_log_file: bool = Option(False, "--save-logfile", "-sl", help="Save a turbodl-download.log file to the download directory.", is_flag=True),
     allocate_space: bool = Option(
         False, "--pre-allocate-space", "-pas", help="Pre-allocate disk space before downloading.", is_flag=True
     ),
@@ -107,22 +106,22 @@ def download(
     Download a file from the provided URL to the specified output path (with a lot of options)
     """
 
-    ram_buffer_value, show_progress_bars, pre_allocate_space, overwrite = process_buffer_options(
-        auto_ram_buffer, use_ram_buffer, no_ram_buffer, hide_progress_bars, allocate_space, no_overwrite
+    ram_buffer_value, show_progress_bar, pre_allocate_space, overwrite = process_buffer_options(
+        auto_ram_buffer, use_ram_buffer, no_ram_buffer, hide_progress_bar, allocate_space, no_overwrite
     )
 
     try:
         turbodl = TurboDL(
             max_connections=max_connections,
-            connection_speed=connection_speed,
-            show_progress_bars=show_progress_bars,
-            save_logfile=save_logfile,
+            connection_speed_mbps=connection_speed_mbps,
+            show_progress_bar=show_progress_bar,
+            save_log_file=save_log_file,
         )
         turbodl.download(
             url=url,
             output_path=output_path,
             pre_allocate_space=pre_allocate_space,
-            use_ram_buffer=ram_buffer_value,
+            enable_ram_buffer=ram_buffer_value,
             overwrite=overwrite,
             timeout=timeout,
             expected_hash=expected_hash,
