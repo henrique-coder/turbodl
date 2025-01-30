@@ -6,6 +6,8 @@ on:
 
 permissions:
   contents: read
+  pull-requests: write
+  issues: write
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -51,9 +53,8 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const targetBranch = context.payload.pull_request.base.ref;
-            const conclusion = '${{ job.status }}' === 'success' ? '✅ All tests passed' : '❌ Some tests failed';
-            const message = `## Test Results for ${targetBranch}\n\n${conclusion}\n\nSee detailed results in the [Actions tab](${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID})`;
+            const success = context.steps.tests.outcome === 'success';
+            const message = `## 🧪 Test Results\n\n${success ? '✅ All tests passed' : '❌ Tests failed'}\n\nFor details, check the [test run](${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID})`;
 
             await github.rest.issues.createComment({
               issue_number: context.issue.number,
