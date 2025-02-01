@@ -82,7 +82,7 @@ turbodl download [...] https://example.com/file.txt path/to/file  # Download the
 
 ##### CLI Demo
 
-![TurboDL CLI Demo](.github/assets/demo.gif)
+[![TurboDL CLI Demo](https://i.imgur.com/xZt5k1V.gif)](https://asciinema.org/a/701070)
 
 ### Contributing
 
