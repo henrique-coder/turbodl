@@ -80,6 +80,10 @@ turbodl download --help  # Show help for the download command
 turbodl download [...] https://example.com/file.txt path/to/file  # Download the file
 ```
 
+##### CLI Demo
+
+![TurboDL CLI Demo](.github/assets/demo.gif)
+
 ### Contributing
 
 Contributions are what make the open source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**.
