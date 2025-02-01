@@ -82,18 +82,22 @@ def download(
         None, help="Destination path. If directory, filename is derived from server response.", show_default="Current directory"
     ),
     max_connections: str = Option("auto", "--max-connections", "-mc", help="Max connections: 'auto' or integer (1-32)."),
-    connection_speed_mbps: float = Option(80, "--connection-speed", "-cs", help="Connection speed in Mbps for optimal connections."),
+    connection_speed_mbps: float = Option(
+        80, "--connection-speed", "-cs", help="Connection speed in Mbps for optimal connections."
+    ),
     hide_progress_bar: bool = Option(
         False, "--hide-progress-bar", "-hpb", help="Hide progress bar (shown by default).", is_flag=True
     ),
-    save_log_file: bool = Option(False, "--save-logfile", "-sl", help="Save a turbodl-download.log file to the download directory.", is_flag=True),
+    save_log_file: bool = Option(
+        False, "--save-logfile", "-sl", help="Save a turbodl-download.log file to the download directory.", is_flag=True
+    ),
     allocate_space: bool = Option(
         False, "--pre-allocate-space", "-pas", help="Pre-allocate disk space before downloading.", is_flag=True
     ),
     auto_ram_buffer: bool = Option(
         False, "--auto-ram-buffer", "-arb", help="Use RAM buffer automatically if path isn't RAM dir (default).", is_flag=True
     ),
-    use_ram_buffer: bool = Option(False, "--use-ram-buffer", "-urb", help="Always use RAM buffer.", is_flag=True),
+    enable_ram_buffer: bool = Option(False, "--enable-ram-buffer", "-erb", help="Always use RAM buffer.", is_flag=True),
     no_ram_buffer: bool = Option(False, "--no-ram-buffer", "-nrb", help="Never use RAM buffer.", is_flag=True),
     no_overwrite: bool = Option(
         False, "--no-overwrite", "-no", help="Don't overwrite existing files (overwrite by default).", is_flag=True
@@ -107,7 +111,7 @@ def download(
     """
 
     ram_buffer_value, show_progress_bar, pre_allocate_space, overwrite = process_buffer_options(
-        auto_ram_buffer, use_ram_buffer, no_ram_buffer, hide_progress_bar, allocate_space, no_overwrite
+        auto_ram_buffer, enable_ram_buffer, no_ram_buffer, hide_progress_bar, allocate_space, no_overwrite
     )
 
     try:
