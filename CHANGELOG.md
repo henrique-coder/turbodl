@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.3.3] - (Bug Fixes & Performance Improvements)
+#### Changed
+- Refactored and simplified entire code structure
+- Updated CI workflow
+
+#### Removed
+- Removed unnecessary docstrings from internal functions
+
+#### Fixed
+- Fixed release workflow
+- Fixed CLI argument names
+
 ## [0.3.2] - (New Features & Bug Fixes)
 #### Changed
 - Refactored and simplified several docstrings
