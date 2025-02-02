@@ -22,14 +22,6 @@ class HashVerificationError(TurboDLError):
     pass
 
 
-class NotEnoughSpaceError(TurboDLError):
-    """
-    Exception raised when there is not enough space to download the file.
-    """
-
-    pass
-
-
 class InvalidArgumentError(TurboDLError):
     """
     Exception raised when an invalid argument is provided to a function.
@@ -38,9 +30,25 @@ class InvalidArgumentError(TurboDLError):
     pass
 
 
-class OnlineRequestError(TurboDLError):
+class InvalidFileSizeError(TurboDLError):
     """
-    Exception raised when an error occurs while making an online request.
+    Exception raised when the file size is invalid, such as negative or zero.
+    """
+
+    pass
+
+
+class NotEnoughSpaceError(TurboDLError):
+    """
+    Exception raised when there is not enough space to download the file.
+    """
+
+    pass
+
+
+class RemoteFileError(TurboDLError):
+    """
+    Exception raised when there is a problem with the remote file.
     """
 
     pass
