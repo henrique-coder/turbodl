@@ -11,7 +11,23 @@ from rich.progress import Progress, TaskID
 
 # Local imports
 from .buffers import ChunkBuffer
-from .utils import download_retry_decorator
+
+
+def download_chunk(http_client: Client, url: str, start: int, end: int, task_id: int, progress: Progress) -> bytes:
+    if end > 0:
+        http_client.headers["Range"] = f"bytes={start}-{end}"
+
+    with http_client.stream("GET", url) as r:
+        r.raise_for_status()
+
+        chunk = b""
+
+        for data in r.iter_bytes(chunk_size=8192):
+            chunk += data
+
+            progress.update(TaskID(task_id), advance=len(data))
+
+        return chunk
 
 
 def download_with_buffer_writer(output_path: str | PathLike, size_bytes: int, position: int, data: bytes) -> None:
@@ -26,7 +42,6 @@ def download_with_buffer_writer(output_path: str | PathLike, size_bytes: int, po
             mm.flush()
 
 
-@download_retry_decorator
 def download_with_buffer_worker(
     http_client: Client,
     url: str,
@@ -92,7 +107,6 @@ def download_with_buffer(
             future.result()
 
 
-@download_retry_decorator
 def download_without_buffer_worker(
     http_client: Client, url: str, output_path: str | PathLike, start: int, end: int, task_id: int, progress: Progress
 ) -> None:

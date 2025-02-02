@@ -10,7 +10,7 @@ from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn
 
 # Local imports
 from .buffers import ChunkBuffer
-from .downloaders import download_with_buffer, download_without_buffer
+from .downloaders import download_chunk, download_with_buffer, download_without_buffer
 from .exceptions import InvalidArgumentError, NotEnoughSpaceError
 from .loggers import FileLogger
 from .utils import (
@@ -25,7 +25,6 @@ from .utils import (
     has_available_space,
     is_ram_directory,
     validate_headers,
-    verify_hash,
 )
 
 
@@ -103,10 +102,10 @@ class TurboDL:
             enable_ram_buffer = not is_ram_dir
 
         # Fetch file info
-        remote_file_info = fetch_file_info(self._http_client, url)
-        url: str = remote_file_info.url
-        filename: str = remote_file_info.filename
-        size: int = remote_file_info.size
+        info_data = fetch_file_info(self._http_client, url)
+        url: str = info_data["url"]
+        filename: str = info_data["filename"]
+        size: int | None = info_data["size"]  # Size in bytes. None if unknown.
 
         # Calculate the number of connections to use for the download
         if self._max_connections == "auto":
@@ -116,7 +115,7 @@ class TurboDL:
         chunk_ranges = generate_chunk_ranges(size, self._max_connections)
 
         # Check if there is enough space to download the file
-        if not has_available_space(self._output_path, size):
+        if size is not None and not has_available_space(self._output_path, size):
             raise NotEnoughSpaceError(f"Not enough space to download {filename}")
 
         # If output path is a directory, append filename
@@ -135,7 +134,7 @@ class TurboDL:
 
         try:
             # Handle pre-allocation of space if required
-            if pre_allocate_space:
+            if size is not None and pre_allocate_space:
                 with Progress(
                     SpinnerColumn(spinner_name="dots", style="bold cyan"),
                     TextColumn(f"[bold cyan]Pre-allocating space for {size} bytes...", justify="left"),
@@ -144,14 +143,15 @@ class TurboDL:
                 ) as progress:
                     progress.add_task("", total=None)
 
-                    with self._output_path.open("wb") as fo:
-                        fo.truncate(size)
+                    if pre_allocate_space and size > 0:
+                        with self._output_path.open("wb") as fo:
+                            fo.truncate(size)
             else:
                 self._output_path.touch(exist_ok=True)
 
             # Set up logger
             if self._save_log_file:
-                self._logger = FileLogger(Path(self._output_path.parent, "turbodl-download.log"), overwrite=False)
+                self._logger = FileLogger(Path(self._output_path.parent, "turbodl-download.log"))
 
             # Set the output path
             self.output_path = self._output_path.as_posix()
@@ -187,7 +187,11 @@ class TurboDL:
             ) as progress:
                 task_id = progress.add_task("download", total=size, filename=self._output_path.name)
 
-                if enable_ram_buffer:
+                if size is None:
+                    self._output_path.write_bytes(
+                        download_chunk(self._http_client, url, 0, 0, task_id, progress)
+                    )  # TODO: Fix this in a better way
+                elif enable_ram_buffer:
                     download_with_buffer(
                         self._http_client, url, self._output_path, size, self._chunk_buffers, chunk_ranges, task_id, progress
                     )
@@ -198,7 +202,3 @@ class TurboDL:
             self._output_path.unlink(missing_ok=True)
             self._output_path = None
             self.output_path = None
-
-        # Check the hash of the downloaded file
-        if expected_hash is not None:
-            verify_hash(self._output_path, expected_hash, hash_type)
