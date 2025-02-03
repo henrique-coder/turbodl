@@ -1,9 +1,9 @@
-# Built-in imports
+# Standard modules
 from collections.abc import Generator
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-# Third-party imports
+# Third-party modules
 from pytest import fixture
 
 # Local imports
@@ -16,7 +16,7 @@ def downloader() -> TurboDL:
     Return a configured TurboDL instance.
     """
 
-    return TurboDL(max_connections="auto", connection_speed_mbps=1000, show_progress_bar=True, save_log_file=False)
+    return TurboDL(max_connections="auto", connection_speed_mbps=1000, show_progress_bar=True, save_log_file=True)
 
 
 @fixture
