@@ -1,7 +1,7 @@
-# Built-in imports
+# Standard modules
 from pathlib import Path
 
-# Third-party imports
+# Third-party modules
 from pytest import mark, raises
 
 # Local imports

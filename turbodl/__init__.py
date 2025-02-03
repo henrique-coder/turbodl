@@ -1,4 +1,4 @@
-# Built-in imports
+# Standard modules
 from importlib.metadata import version
 
 # Local imports
@@ -7,8 +7,9 @@ from .exceptions import (
     DownloadError,
     HashVerificationError,
     InvalidArgumentError,
+    InvalidFileSizeError,
     NotEnoughSpaceError,
-    OnlineRequestError,
+    RemoteFileError,
     TurboDLError,
 )
 
@@ -17,8 +18,9 @@ __all__: list[str] = [
     "DownloadError",
     "HashVerificationError",
     "InvalidArgumentError",
+    "InvalidFileSizeError",
     "NotEnoughSpaceError",
-    "OnlineRequestError",
+    "RemoteFileError",
     "TurboDLError",
 ]
 __version__ = version("turbodl")

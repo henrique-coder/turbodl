@@ -1,20 +1,35 @@
-# Built-in imports
+# Standard modules
+from collections.abc import Callable
+from contextlib import suppress
+from dataclasses import dataclass
+from hashlib import new as hashlib_new
 from math import ceil, log2, sqrt
 from mimetypes import guess_extension as guess_mimetype_extension
+from mmap import ACCESS_READ, mmap
 from os import PathLike
 from pathlib import Path
-from typing import Final, Literal
+from re import search as re_search
+from typing import Any, Final, Literal
 from urllib.parse import unquote, urlparse
 
-# Third-party imports
-from httpx import Client, HTTPError, RemoteProtocolError
+# Third-party modules
+from httpx import (
+    Client,
+    ConnectError,
+    ConnectTimeout,
+    HTTPError,
+    ReadTimeout,
+    RemoteProtocolError,
+    RequestError,
+    TimeoutException,
+)
 from psutil import disk_partitions, disk_usage
 from rich.progress import DownloadColumn, ProgressColumn, Task, TransferSpeedColumn
 from rich.text import Text
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 
 # Local imports
-from .exceptions import InvalidArgumentError, OnlineRequestError
+from .exceptions import HashVerificationError, InvalidArgumentError, InvalidFileSizeError, RemoteFileError
 
 
 REQUIRED_HEADERS: Final[tuple[dict[str, str], ...]] = ({"Accept-Encoding": "identity"},)
@@ -22,11 +37,33 @@ DEFAULT_HEADERS: Final[tuple[dict[str, str], ...]] = (
     {"Accept": "*/*"},
     {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36"},
 )
+ONE_MB: Final[int] = 1048576
 ONE_GB: Final[int] = 1073741824
-RAM_FILESYSTEMS: Final[frozenset[str]] = frozenset({"tmpfs", "ramfs"})
+RAM_FILESYSTEMS: Final[frozenset[str]] = frozenset({"tmpfs", "ramfs", "devtmpfs"})
 SIZE_UNITS: Final[tuple[str, ...]] = ("B", "KB", "MB", "GB", "TB")
 BYTES_IN_UNIT: Final[int] = 1024
 YES_NO_VALUES: Final[tuple[Literal["no"], Literal["yes"]]] = ("no", "yes")
+
+
+@dataclass
+class RemoteFileInfo:
+    url: str
+    filename: str
+    mimetype: str
+    size: int
+
+
+def download_retry_decorator(func: Callable[..., Any]) -> Callable[..., Any]:
+    @retry(
+        stop=stop_after_attempt(5),
+        wait=wait_exponential(min=2, max=120),
+        retry=retry_if_exception_type((ConnectError, ConnectTimeout, ReadTimeout, RemoteProtocolError, TimeoutException)),
+        reraise=True,
+    )
+    def wrapper(*args: Any, **kwargs: Any) -> Any:
+        return func(*args, **kwargs)
+
+    return wrapper
 
 
 class CustomDownloadColumn(DownloadColumn):
@@ -175,56 +212,74 @@ def is_ram_directory(path: str | PathLike) -> bool:
 
 
 @retry(
-    stop=stop_after_attempt(5),
-    wait=wait_exponential(multiplier=1, min=4, max=10),
-    retry=retry_if_exception_type(HTTPError),
+    stop=stop_after_attempt(3),
+    wait=wait_exponential(multiplier=1, min=3, max=10),
+    retry=retry_if_exception_type((HTTPError, RequestError, ConnectError, TimeoutException)),
     reraise=True,
 )
-def fetch_file_info(http_client: Client, url: str) -> dict[str, str | int | None]:
-    try:
-        r = http_client.head(url, follow_redirects=True)
-        r.raise_for_status()
-    except RemoteProtocolError:
-        return {
-            "url": url,
-            "filename": Path(unquote(urlparse(url).path)).name,
-            "mimetype": "application/octet-stream",
-            "size": None,
-        }
-    except HTTPError as e:
-        raise OnlineRequestError(f"An error occurred while getting file info: {str(e)}") from e
+def fetch_file_info(http_client: Client, url: str) -> RemoteFileInfo:
+    if not url or not isinstance(url, str):
+        raise InvalidArgumentError("URL must be a non-empty string")
 
-    r_headers = r.headers
-    content_length = int(r_headers.get("content-length", 0))
-    content_length = None if content_length < 0 else content_length
+    r = None
+    r_headers = None
+
+    try:
+        r = http_client.head(url)
+        r.raise_for_status()
+        r_headers = r.headers
+    except RemoteProtocolError:
+        r = http_client.get(url, headers={"Range": "bytes=0-0"})
+        r.raise_for_status()
+        r_headers = r.headers
+    except HTTPError as e:
+        raise RemoteFileError("Invalid or offline URL") from e
+
+    if not r_headers:
+        raise RemoteFileError("No headers received from remote server")
+
+    size = None
+
+    if content_range := r_headers.get("Content-Range"):
+        with suppress(ValueError, IndexError):
+            size = int(content_range.split("/")[-1])
+
+    if not size and (content_length := r_headers.get("Content-Length")):
+        with suppress(ValueError):
+            size = int(content_length)
+
+    if not size or size <= 0:
+        raise InvalidFileSizeError(f"Invalid file size: {size}")
+
     content_type = r_headers.get("content-type", "application/octet-stream").split(";")[0].strip()
-    final_url = str(r.url)
+
     filename = None
 
-    # Try to get filename from Content-Disposition header
-    if content_disposition := r_headers.get("content-disposition"):
-        if "filename*=" in content_disposition:
-            filename = content_disposition.split("filename*=")[-1].split("'")[-1]
-        elif "filename=" in content_disposition:
-            filename = content_disposition.split("filename=")[-1].strip("\"'")
+    if content_disposition := r_headers.get("Content-Disposition"):
+        if match := re_search(r"filename\*=(?:UTF-8|utf-8)''\s*(.+)", content_disposition):
+            filename = unquote(match.group(1))
+        elif match := re_search(r'filename=["\']*([^"\']+)', content_disposition):
+            filename = match.group(1)
 
-    # Try to get filename from final URL after redirects
     if not filename:
-        filename = Path(unquote(urlparse(final_url).path)).name
+        path = urlparse(str(r.url)).path
 
-    # Try to get filename from original URL if still not found
+        if path and path != "/":
+            filename = Path(unquote(path)).name
+
     if not filename:
-        filename = Path(unquote(urlparse(url).path)).name
+        path = urlparse(url).path
 
-    # Add extension from mimetype if filename has no extension
-    if filename and "." not in filename and (ext := guess_mimetype_extension(content_type)):
+        if path and path != "/":
+            filename = Path(unquote(path)).name
+
+    if not filename:
+        filename = "unknown_file"
+
+    if "." not in filename and (ext := guess_mimetype_extension(content_type)):
         filename = f"{filename}{ext}"
 
-    # Use default name as last resort
-    if not filename:
-        filename = f"unknown_file{guess_mimetype_extension(content_type) or ''}"
-
-    return {"url": final_url, "filename": filename, "mimetype": content_type, "size": content_length}
+    return RemoteFileInfo(url=str(r.url), filename=filename, mimetype=content_type, size=size)
 
 
 def format_size(size_bytes: int) -> str:
@@ -241,10 +296,7 @@ def bool_to_yes_no(value: bool) -> Literal["yes", "no"]:
     return YES_NO_VALUES[value]
 
 
-def generate_chunk_ranges(size_bytes: int | None, max_connections: int) -> list[tuple[int, int]]:
-    if size_bytes is None:
-        return [(0, 0)]
-
+def generate_chunk_ranges(size_bytes: int, max_connections: int) -> list[tuple[int, int]]:
     chunk_size = ceil(size_bytes / max_connections)
 
     ranges = []
@@ -268,3 +320,32 @@ def calculate_max_connections(size_bytes: int, connection_speed_mbps: float) -> 
     conn_float = beta * (log2(1 + size_mb / base_size) * sqrt(connection_speed_mbps / 100))
 
     return max(2, min(24, ceil(conn_float)))
+
+
+def verify_hash(file_path: str | PathLike, expected_hash: str, hash_type: str, chunk_size: int = ONE_MB) -> None:
+    file_path = Path(file_path)
+
+    hasher = hashlib_new(hash_type)
+    file_size = file_path.stat().st_size
+
+    if file_size < chunk_size:
+        with file_path.open("rb") as f:
+            hasher.update(f.read())
+    else:
+        with file_path.open("rb") as f, mmap(f.fileno(), 0, access=ACCESS_READ) as mm:
+            while True:
+                chunk = mm.read(chunk_size)
+
+                if not chunk:
+                    break
+
+                hasher.update(chunk)
+
+    file_hash = hasher.hexdigest()
+
+    if file_hash != expected_hash:
+        raise HashVerificationError(
+            f"Hash verification failed - Type: {hash_type} - Current hash: {file_hash} - Expected hash: {expected_hash}"
+        )
+
+    return None
