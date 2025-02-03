@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.3.4] - (Hotfixes)
+#### Changed
+- Updated documentation by adding a demo gif demonstrating the TurboDL functionality
+
+#### Added
+- Missing hash verification feature
+- Automatic retries on connection errors
+
+#### Fixed
+- Fixed release workflow
+- Fixed CLI argument names and their values
+
 ## [0.3.3] - (Bug Fixes & Performance Improvements)
 #### Changed
 - Refactored and simplified entire code structure
