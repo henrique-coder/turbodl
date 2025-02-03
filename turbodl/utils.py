@@ -1,4 +1,4 @@
-# Built-in imports
+# Standard modules
 from collections.abc import Callable
 from contextlib import suppress
 from dataclasses import dataclass
@@ -12,7 +12,7 @@ from re import search as re_search
 from typing import Any, Final, Literal
 from urllib.parse import unquote, urlparse
 
-# Third-party imports
+# Third-party modules
 from httpx import (
     Client,
     ConnectError,

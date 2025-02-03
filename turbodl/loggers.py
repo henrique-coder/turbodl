@@ -1,4 +1,4 @@
-# Built-in imports
+# Standard modules
 from logging import DEBUG, FileHandler, Formatter, NullHandler, getLogger
 from os import PathLike
 from pathlib import Path

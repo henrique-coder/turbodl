@@ -1,11 +1,11 @@
-# Built-in imports
+# Standard modules
 from concurrent.futures import ThreadPoolExecutor
 from mmap import ACCESS_WRITE, mmap
 from os import PathLike, ftruncate
 from pathlib import Path
 from threading import Lock
 
-# Third-party imports
+# Third-party modules
 from httpx import Client
 from rich.progress import Progress, TaskID
 

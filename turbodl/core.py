@@ -1,9 +1,9 @@
-# Built-in imports
+# Standard modules
 from os import PathLike
 from pathlib import Path
 from typing import Literal
 
-# Third-party imports
+# Third-party modules
 from httpx import Client, Limits
 from rich.console import Console
 from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn

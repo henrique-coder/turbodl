@@ -1,4 +1,4 @@
-# Built-in imports
+# Standard modules
 from importlib.metadata import version
 
 # Local imports

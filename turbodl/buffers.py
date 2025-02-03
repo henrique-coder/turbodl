@@ -1,7 +1,7 @@
-# Built-in imports
+# Standard modules
 from io import BytesIO
 
-# Third-party imports
+# Third-party modules
 from psutil import virtual_memory
 
 
