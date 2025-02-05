@@ -334,20 +334,15 @@ def verify_hash(file_path: str | PathLike, expected_hash: str, hash_type: str, c
     file_path = Path(file_path)
 
     hasher = hashlib_new(hash_type)
-    file_size = file_path.stat().st_size
 
-    if file_size < chunk_size:
-        with file_path.open("rb") as f:
-            hasher.update(f.read())
-    else:
-        with file_path.open("rb") as f, mmap(f.fileno(), 0, access=ACCESS_READ) as mm:
-            while True:
-                chunk = mm.read(chunk_size)
+    with file_path.open("rb") as f, mmap(f.fileno(), 0, access=ACCESS_READ) as mm:
+        while True:
+            chunk = mm.read(chunk_size)
 
-                if not chunk:
-                    break
+            if not chunk:
+                break
 
-                hasher.update(chunk)
+            hasher.update(chunk)
 
     file_hash = hasher.hexdigest()
 
