@@ -54,7 +54,7 @@ class TurboDL:
         self._console: Console = Console()
         self._http_client: Client = Client(
             follow_redirects=True,
-            limits=Limits(max_connections=64, max_keepalive_connections=32, keepalive_expiry=10),
+            limits=Limits(max_connections=32, max_keepalive_connections=32, keepalive_expiry=60),
             timeout=None,
         )
         self._chunk_buffers: dict[str, ChunkBuffer] = {}
