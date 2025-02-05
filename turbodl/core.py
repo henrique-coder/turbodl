@@ -224,6 +224,7 @@ class TurboDL:
 
         # Remove the .turbodownload suffix
         self._output_path.rename(self._output_path.with_suffix(""))
+        self._output_path = self._output_path.with_suffix("")
 
         # Set the output path attribute
         self.output_path = self._output_path.as_posix()
