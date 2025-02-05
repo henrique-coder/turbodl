@@ -11,6 +11,7 @@ help:
 	@echo "  lint        - Check code with ruff"
 	@echo "  format      - Format code with ruff"
 	@echo "  tests       - Run tests with pytest"
+	@echo "  demo        - Generate a gif demonstrating the TurboDL CLI functionality and upload it to asciinema"
 	@echo "  help        - Show this help message"
 
 setup-venv:
