@@ -17,17 +17,21 @@ console = Console()
 def version_callback(value: bool) -> None:
     if value:
         console.print(f"[bold white]TurboDL (turbodl) [bold green]{__version__}[/]")
+
         raise Exit()
 
 
 def check_for_updates() -> None:
     try:
         r = get("https://api.github.com/repos/henrique-coder/turbodl/releases/latest", follow_redirects=False)
+
         if r.status_code != 200:
             console.print("[red]Failed to check for updates: Could not reach GitHub API[/]")
-            return
+
+            return None
 
         latest_version = r.json()["tag_name"].replace("v", "")
+
         if latest_version > __version__:
             console.print(
                 f"[yellow]Update available![/] Current version: [red]{__version__}[/] → Latest version: [green]{latest_version}[/]\n"
@@ -37,6 +41,7 @@ def check_for_updates() -> None:
             console.print(f"[green]TurboDL is up to date![/] Current version: [bold]{__version__}[/]")
     except Exception as e:
         console.print(f"[red]Failed to check for updates: {str(e)}[/]")
+
         raise Exit(1) from e
 
 
@@ -52,9 +57,7 @@ def callback(
 
 @app.command()
 def check() -> None:
-    """
-    Check for available updates.
-    """
+    """Check for available updates."""
 
     check_for_updates()
 
@@ -90,15 +93,14 @@ def download(
     expected_hash: str = Option(None, "--expected-hash", "-eh", help="Expected file hash for verification."),
     hash_type: str = Option("md5", "--hash-type", "-ht", help="Hash algorithm for verification."),
 ) -> None:
-    """
-    Download a file from the provided URL to the specified output path (with a lot of options)
-    """
+    """Download a file from the provided URL to the specified output path (with a lot of options)"""
 
-    # Process max_connections
+    # Process max_connections option
     try:
-        max_conn = int(max_connections) if max_connections != "auto" else "auto"
+        max_connections = int(max_connections) if max_connections != "auto" else "auto"
     except ValueError as e:
         console.print("[red]Error: max-connections must be 'auto' or an integer[/]")
+
         raise Exit(1) from e
 
     # Process RAM buffer options
@@ -112,7 +114,7 @@ def download(
 
     try:
         turbodl = TurboDL(
-            max_connections=max_conn,
+            max_connections=max_connections,
             connection_speed_mbps=connection_speed_mbps,
             show_progress_bar=not hide_progress_bar,
             save_log_file=save_log_file,

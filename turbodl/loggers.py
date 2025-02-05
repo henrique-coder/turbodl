@@ -8,6 +8,7 @@ class FileLogger:
     def __init__(self, log_file_path: str | PathLike | None, overwrite: bool = False) -> None:
         self.log_file_path: Path | None = Path(log_file_path) if log_file_path is not None else None
         self.overwrite: bool = overwrite
+
         self._setup_logger()
 
     def _setup_logger(self) -> None:

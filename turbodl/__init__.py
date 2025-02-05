@@ -14,6 +14,7 @@ from .exceptions import (
     TurboDLError,
 )
 
+
 __all__: list[str] = [
     "TurboDL",
     "DownloadError",
