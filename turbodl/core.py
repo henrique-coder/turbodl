@@ -105,7 +105,7 @@ class TurboDL:
         # Fetch file info
         remote_file_info = fetch_file_info(self._http_client, url)
         url: str = remote_file_info.url
-        filename: str = remote_file_info.filename
+        filename: str = remote_file_info.filename + ".turbodownload"
         size: int = remote_file_info.size
 
         # Calculate the number of connections to use for the download
@@ -153,16 +153,13 @@ class TurboDL:
             if self._save_log_file:
                 self._logger = FileLogger(Path(self._output_path.parent, "turbodl-download.log"), overwrite=False)
 
-            # Set the output path
-            self.output_path = self._output_path.as_posix()
-
             # Set up progress bar header text
             if self._show_progress_bar:
                 self._console.print(
                     f"[bold bright_black]╭ [green]Downloading [blue]{url} [bright_black]• [green]{'~' + format_size(size) if size is not None else 'Unknown'}"
                 )
                 self._console.print(
-                    f"[bold bright_black]│ [green]Output file: [cyan]{self.output_path} [bright_black]• [green]RAM dir: [cyan]{bool_to_yes_no(is_ram_dir)} [bright_black]• [green]RAM buffer: [cyan]{bool_to_yes_no(enable_ram_buffer)} [bright_black]• [green]Connection speed: [cyan]{self._connection_speed_mbps} Mbps"
+                    f"[bold bright_black]│ [green]Output file: [cyan]{self._output_path.with_suffix('').as_posix()} (.turbodownload) [bright_black]• [green]RAM directory/buffer: [cyan]{bool_to_yes_no(is_ram_dir)}/{bool_to_yes_no(enable_ram_buffer)} [bright_black]• [green]Connections: [cyan]{self._max_connections} [bright_black]• [green]Speed: [cyan]{self._connection_speed_mbps} Mbps"
                 )
 
             # Set up progress bar and start download
@@ -198,6 +195,12 @@ class TurboDL:
             self._output_path.unlink(missing_ok=True)
             self._output_path = None
             self.output_path = None
+
+        # Remove the .turbodownload suffix
+        self._output_path.rename(self._output_path.with_suffix(""))
+
+        # Set the output path attribute
+        self.output_path = self._output_path.as_posix()
 
         # Check the hash of the downloaded file
         if expected_hash is not None:
