@@ -22,7 +22,7 @@ TurboDL is an extremely smart, fast, and efficient download manager with several
 #### Installation (from [PyPI](https://pypi.org/project/turbodl))
 
 ```bash
-pip install -U turbodl  # Install the latest version of TurboDL
+pip install --upgrade turbodl  # Install the latest version of TurboDL
 ```
 
 ### Example Usage
@@ -39,7 +39,7 @@ turbodl.download(
     output_path="path/to/file"  # The file/path to save the downloaded file to or leave it empty to save it to the current working directory
 )
 
-print(turbodl.output_path)  # The absolute path to the downloaded file
+turbodl.output_path  # The absolute path to the downloaded file
 
 ```
 
@@ -67,7 +67,7 @@ turbodl.download(
     hash_type="md5",
 )
 
-print(turbodl.output_path)  # The absolute path to the downloaded file
+turbodl.output_path  # The absolute path to the downloaded file
 
 ```
 
@@ -82,7 +82,7 @@ turbodl download [...] https://example.com/file.txt path/to/file  # Download the
 
 ##### CLI Demo
 
-[![TurboDL CLI Demo](https://i.imgur.com/xZt5k1V.gif)](https://asciinema.org/a/701070)
+[![TurboDL CLI Demo](assets/demo.gif)](https://asciinema.org/a/4qO7o9RFMnGJuJmg46gldBFik)
 
 ### Contributing
 
