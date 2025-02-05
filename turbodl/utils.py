@@ -43,6 +43,8 @@ RAM_FILESYSTEMS: Final[frozenset[str]] = frozenset({"tmpfs", "ramfs", "devtmpfs"
 SIZE_UNITS: Final[tuple[str, ...]] = ("B", "KB", "MB", "GB", "TB")
 BYTES_IN_UNIT: Final[int] = 1024
 YES_NO_VALUES: Final[tuple[Literal["no"], Literal["yes"]]] = ("no", "yes")
+MIN_CHUNK_SIZE: Final[int] = 33554432
+MAX_CHUNK_SIZE: Final[int] = 268435456
 
 
 @dataclass
@@ -297,29 +299,28 @@ def bool_to_yes_no(value: bool) -> Literal["yes", "no"]:
 
 
 def generate_chunk_ranges(size_bytes: int, max_connections: int) -> list[tuple[int, int]]:
-    chunk_size = ceil(size_bytes / max_connections)
+    chunk_size = max(MIN_CHUNK_SIZE, min(ceil(size_bytes / max_connections), MAX_CHUNK_SIZE))
 
     ranges = []
     start = 0
+    remaining_bytes = size_bytes
 
-    while size_bytes > 0:
-        current_chunk = min(chunk_size, size_bytes)
+    while remaining_bytes > 0:
+        current_chunk = min(chunk_size, remaining_bytes)
         end = start + current_chunk - 1
         ranges.append((start, end))
         start = end + 1
-        size_bytes -= current_chunk
+        remaining_bytes -= current_chunk
 
     return ranges
 
 
 def calculate_max_connections(size_bytes: int, connection_speed_mbps: float) -> int:
     size_mb = size_bytes / (1024 * 1024)
+    base_connections = min(12, ceil(sqrt(size_mb) / 2))
+    speed_factor = min(2, connection_speed_mbps / 100)
 
-    beta = 5.6
-    base_size = 1.0
-    conn_float = beta * (log2(1 + size_mb / base_size) * sqrt(connection_speed_mbps / 100))
-
-    return max(2, min(24, ceil(conn_float)))
+    return max(4, min(24, ceil(base_connections * speed_factor)))
 
 
 def verify_hash(file_path: str | PathLike, expected_hash: str, hash_type: str, chunk_size: int = ONE_MB) -> None:
