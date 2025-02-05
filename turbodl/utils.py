@@ -320,7 +320,7 @@ def calculate_max_connections(size_bytes: int, connection_speed_mbps: float) -> 
     base_connections = min(12, ceil(sqrt(size_mb) / 2))
     speed_factor = min(2, connection_speed_mbps / 100)
 
-    return max(4, min(24, ceil(base_connections * speed_factor)))
+    return max(2, min(24, ceil(base_connections * speed_factor)))
 
 
 def verify_hash(file_path: str | PathLike, expected_hash: str, hash_type: str, chunk_size: int = ONE_MB) -> None:
