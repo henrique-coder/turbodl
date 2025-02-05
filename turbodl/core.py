@@ -1,7 +1,10 @@
 # Standard modules
 from os import PathLike
 from pathlib import Path
-from typing import Literal
+from signal import SIGINT, SIGTERM, Signals, signal
+from sys import exit
+from types import FrameType
+from typing import Literal, NoReturn
 
 # Third-party modules
 from httpx import Client, Limits
@@ -11,7 +14,7 @@ from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn
 # Local imports
 from .buffers import ChunkBuffer
 from .downloaders import download_with_buffer, download_without_buffer
-from .exceptions import InvalidArgumentError, NotEnoughSpaceError
+from .exceptions import DownloadInterruptedError, InvalidArgumentError, NotEnoughSpaceError
 from .loggers import FileLogger
 from .utils import (
     CustomDownloadColumn,
@@ -37,6 +40,9 @@ class TurboDL:
         show_progress_bar: bool = True,
         save_log_file: bool = False,
     ) -> None:
+        # Setup signal handlers
+        self._setup_signal_handlers()
+
         # Validate arguments
         if isinstance(max_connections, int) and not 1 <= max_connections <= 32:
             raise InvalidArgumentError("max_connections must be between 1 and 32")
@@ -61,6 +67,22 @@ class TurboDL:
 
         # Initialize public attributes
         self.output_path: str | None = None
+
+    def _setup_signal_handlers(self) -> None:
+        for sig in (SIGINT, SIGTERM):
+            signal(sig, self._signal_handler)
+
+    def _signal_handler(self, signum: Signals, frame: FrameType | None) -> NoReturn:
+        self._cleanup()
+
+        exit(0)
+
+    def _cleanup(self) -> None:
+        if isinstance(self._output_path, Path):
+            self._output_path.unlink(missing_ok=True)
+
+        if hasattr(self, "_http_client"):
+            self._http_client.close()
 
     def download(
         self,
@@ -190,11 +212,15 @@ class TurboDL:
                     )
                 else:
                     download_without_buffer(self._http_client, url, self._output_path, chunk_ranges, task_id, progress)
-        except KeyboardInterrupt:
+        except KeyboardInterrupt as e:
             # Handle download interruption by user
-            self._output_path.unlink(missing_ok=True)
-            self._output_path = None
-            self.output_path = None
+            self._cleanup()
+
+            raise DownloadInterruptedError("Download interrupted by user") from e
+        except Exception as e:
+            self._cleanup()
+
+            raise e
 
         # Remove the .turbodownload suffix
         self._output_path.rename(self._output_path.with_suffix(""))
