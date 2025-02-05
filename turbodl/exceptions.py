@@ -6,6 +6,14 @@ class TurboDLError(Exception):
     pass
 
 
+class DownloadInterruptedError(TurboDLError):
+    """
+    Exception raised when the download is interrupted.
+    """
+
+    pass
+
+
 class DownloadError(TurboDLError):
     """
     Exception raised when an error occurs while downloading a file.
