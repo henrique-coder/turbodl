@@ -15,7 +15,7 @@ MAX_BUFFER_SIZE: Final[int] = 2147483648  # 2 GB
 
 # Connection constants
 MAX_CONNECTIONS: Final[int] = 24
-MIN_CONNECTIONS: Final[int] = 1
+MIN_CONNECTIONS: Final[int] = 2
 
 # File system constants
 RAM_FILESYSTEMS: Final[frozenset[str]] = frozenset({"tmpfs", "ramfs", "devtmpfs"})
