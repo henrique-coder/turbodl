@@ -4,11 +4,14 @@ from io import BytesIO
 # Third-party modules
 from psutil import virtual_memory
 
+# Local imports
+from .constants import CHUNK_SIZE, MAX_BUFFER_SIZE
+
 
 class ChunkBuffer:
-    def __init__(self, chunk_size_bytes: int = 256 * (1024**2), max_buffer_bytes: int = 1 * (1024**3)) -> None:
+    def __init__(self, chunk_size_bytes: int = CHUNK_SIZE, max_buffer_size_bytes: int = MAX_BUFFER_SIZE) -> None:
         self.chunk_size = chunk_size_bytes
-        self.max_buffer_size = min(max_buffer_bytes, virtual_memory().available * 0.30)
+        self.max_buffer_size = min(max_buffer_size_bytes, virtual_memory().available * 0.30)
         self.current_buffer = BytesIO()
         self.current_size = 0
         self.total_buffered = 0

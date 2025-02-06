@@ -7,11 +7,11 @@ VENV := .venv
 help:
 	@echo "Available commands:"
 	@echo "  setup-venv  - Create a virtual environment"
-	@echo "  install     - Update dependencies, poetry.lock file, and install project"
-	@echo "  update      - Update dependencies and poetry.lock file"
+	@echo "  update      - Update dependencies, poetry.lock file, and install project"
 	@echo "  lint        - Check code with ruff"
 	@echo "  format      - Format code with ruff"
 	@echo "  tests       - Run tests with pytest"
+	@echo "  demo        - Generate a gif demonstrating the TurboDL CLI functionality and upload it to asciinema"
 	@echo "  help        - Show this help message"
 
 setup-venv:
@@ -22,12 +22,9 @@ setup-venv:
 	@touch $(VENV)
 	@echo "Virtual environment created at $(VENV) with Poetry installed"
 
-install:
-	poetry lock
-	poetry install
-
 update:
 	poetry update
+	poetry install
 
 lint:
 	poetry run ruff check
@@ -37,3 +34,12 @@ format:
 
 tests:
 	poetry run pytest -v
+
+demo:
+	asciinema rec "assets/demo.cast" --overwrite --rows 5 --cols 135 --title "TurboDL CLI Demo (https://github.com/henrique-coder/turbodl)" --command "turbodl download -cs 700 https://testfile.org/1.3GBiconpng /tmp"
+	agg "assets/demo.cast" "assets/demo.gif"
+	@echo -n "Do you want to upload the generated gif to asciinema (y/N): "
+	@read answer; \
+	if [ "$$answer" = "y" ] || [ "$$answer" = "Y" ]; then \
+		asciinema upload "assets/demo.cast"; \
+	fi

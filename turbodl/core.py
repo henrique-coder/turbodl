@@ -1,7 +1,10 @@
 # Standard modules
 from os import PathLike
 from pathlib import Path
-from typing import Literal
+from signal import SIGINT, SIGTERM, Signals, signal
+from sys import exit
+from types import FrameType
+from typing import Literal, NoReturn
 
 # Third-party modules
 from httpx import Client, Limits
@@ -11,7 +14,7 @@ from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn
 # Local imports
 from .buffers import ChunkBuffer
 from .downloaders import download_with_buffer, download_without_buffer
-from .exceptions import InvalidArgumentError, NotEnoughSpaceError
+from .exceptions import DownloadInterruptedError, InvalidArgumentError, NotEnoughSpaceError
 from .loggers import FileLogger
 from .utils import (
     CustomDownloadColumn,
@@ -37,6 +40,9 @@ class TurboDL:
         show_progress_bar: bool = True,
         save_log_file: bool = False,
     ) -> None:
+        # Setup signal handlers
+        self._setup_signal_handlers()
+
         # Validate arguments
         if isinstance(max_connections, int) and not 1 <= max_connections <= 32:
             raise InvalidArgumentError("max_connections must be between 1 and 32")
@@ -54,13 +60,29 @@ class TurboDL:
         self._console: Console = Console()
         self._http_client: Client = Client(
             follow_redirects=True,
-            limits=Limits(max_connections=64, max_keepalive_connections=32, keepalive_expiry=10),
+            limits=Limits(max_connections=32, max_keepalive_connections=32, keepalive_expiry=60),
             timeout=None,
         )
         self._chunk_buffers: dict[str, ChunkBuffer] = {}
 
         # Initialize public attributes
         self.output_path: str | None = None
+
+    def _setup_signal_handlers(self) -> None:
+        for sig in (SIGINT, SIGTERM):
+            signal(sig, self._signal_handler)
+
+    def _signal_handler(self, signum: Signals, frame: FrameType | None) -> NoReturn:
+        self._cleanup()
+
+        exit(0)
+
+    def _cleanup(self) -> None:
+        if isinstance(self._output_path, Path):
+            self._output_path.unlink(missing_ok=True)
+
+        if hasattr(self, "_http_client"):
+            self._http_client.close()
 
     def download(
         self,
@@ -105,7 +127,7 @@ class TurboDL:
         # Fetch file info
         remote_file_info = fetch_file_info(self._http_client, url)
         url: str = remote_file_info.url
-        filename: str = remote_file_info.filename
+        filename: str = remote_file_info.filename + ".turbodownload"
         size: int = remote_file_info.size
 
         # Calculate the number of connections to use for the download
@@ -153,16 +175,13 @@ class TurboDL:
             if self._save_log_file:
                 self._logger = FileLogger(Path(self._output_path.parent, "turbodl-download.log"), overwrite=False)
 
-            # Set the output path
-            self.output_path = self._output_path.as_posix()
-
             # Set up progress bar header text
             if self._show_progress_bar:
                 self._console.print(
                     f"[bold bright_black]╭ [green]Downloading [blue]{url} [bright_black]• [green]{'~' + format_size(size) if size is not None else 'Unknown'}"
                 )
                 self._console.print(
-                    f"[bold bright_black]│ [green]Output file: [cyan]{self.output_path} [bright_black]• [green]RAM dir: [cyan]{bool_to_yes_no(is_ram_dir)} [bright_black]• [green]RAM buffer: [cyan]{bool_to_yes_no(enable_ram_buffer)} [bright_black]• [green]Connection speed: [cyan]{self._connection_speed_mbps} Mbps"
+                    f"[bold bright_black]│ [green]Output file: [cyan]{self._output_path.with_suffix('').as_posix()} (.turbodownload) [bright_black]• [green]RAM directory/buffer: [cyan]{bool_to_yes_no(is_ram_dir)}/{bool_to_yes_no(enable_ram_buffer)} [bright_black]• [green]Connections: [cyan]{self._max_connections} [bright_black]• [green]Speed: [cyan]{self._connection_speed_mbps} Mbps"
                 )
 
             # Set up progress bar and start download
@@ -193,11 +212,22 @@ class TurboDL:
                     )
                 else:
                     download_without_buffer(self._http_client, url, self._output_path, chunk_ranges, task_id, progress)
-        except KeyboardInterrupt:
+        except KeyboardInterrupt as e:
             # Handle download interruption by user
-            self._output_path.unlink(missing_ok=True)
-            self._output_path = None
-            self.output_path = None
+            self._cleanup()
+
+            raise DownloadInterruptedError("Download interrupted by user") from e
+        except Exception as e:
+            self._cleanup()
+
+            raise e
+
+        # Remove the .turbodownload suffix
+        self._output_path.rename(self._output_path.with_suffix(""))
+        self._output_path = self._output_path.with_suffix("")
+
+        # Set the output path attribute
+        self.output_path = self._output_path.as_posix()
 
         # Check the hash of the downloaded file
         if expected_hash is not None:

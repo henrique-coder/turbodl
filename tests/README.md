@@ -8,14 +8,14 @@ Ensures that all TurboDL features are not broken.
 
 ### Running the tests
 
-Run through the Makefile:
-
-```bash
-make tests
-```
-
-Or via bash command:
+Run the tests with the following command:
 
 ```bash
 poetry run pytest -v
+```
+
+Or through Makefile:
+
+```bash
+make tests
 ```

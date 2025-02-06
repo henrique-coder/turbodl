@@ -1,5 +1,30 @@
 # Changelog
 
+## [0.3.5] - (Performance & Stability Improvements)
+#### Changed
+- Moved all constants to a dedicated constants.py file
+- Updated chunk buffer values
+- Enhanced code typings
+- Improved max connections calculator
+
+#### Added
+- Demo option for Makefile
+- Signal handlers for graceful exit
+- .turbodownload suffix to incomplete downloads
+- DownloadInterruptedError exception
+- Demo CLI gif for documentation
+
+#### Fixed
+- Hash checker improvements
+- Wrong file path handling
+- Various gitignore configurations
+- Test files structure
+- Code formatting with ruff linter
+- Changed minimum "max connections" to 2 instead of 4
+- Enhanced chunk range generator
+- Increased keepalive time and reduced max connections to 24
+- Various CLI options and configurations
+
 ## [0.3.4] - (Hotfixes)
 #### Changed
 - Updated documentation by adding a demo gif demonstrating the TurboDL functionality

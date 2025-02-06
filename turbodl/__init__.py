@@ -5,6 +5,7 @@ from importlib.metadata import version
 from .core import TurboDL
 from .exceptions import (
     DownloadError,
+    DownloadInterruptedError,
     HashVerificationError,
     InvalidArgumentError,
     InvalidFileSizeError,
@@ -13,9 +14,11 @@ from .exceptions import (
     TurboDLError,
 )
 
+
 __all__: list[str] = [
     "TurboDL",
     "DownloadError",
+    "DownloadInterruptedError",
     "HashVerificationError",
     "InvalidArgumentError",
     "InvalidFileSizeError",

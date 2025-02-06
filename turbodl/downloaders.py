@@ -1,4 +1,5 @@
 # Standard modules
+from collections.abc import Sequence
 from concurrent.futures import ThreadPoolExecutor
 from mmap import ACCESS_WRITE, mmap
 from os import PathLike, ftruncate
@@ -65,7 +66,7 @@ def download_with_buffer(
     output_path: str | PathLike,
     size_bytes: int,
     chunk_buffers: dict[str, ChunkBuffer],
-    chunk_ranges: list[tuple[int, int]],
+    chunk_ranges: Sequence[tuple[int, int]],
     task_id: int,
     progress: Progress,
 ) -> None:
@@ -119,7 +120,7 @@ def download_without_buffer(
     http_client: Client,
     url: str,
     output_path: str | PathLike,
-    chunk_ranges: list[tuple[int, int]],
+    chunk_ranges: Sequence[tuple[int, int]],
     task_id: int,
     progress: Progress,
 ) -> None:

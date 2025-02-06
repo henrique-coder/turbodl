@@ -3,13 +3,13 @@ from collections.abc import Callable
 from contextlib import suppress
 from dataclasses import dataclass
 from hashlib import new as hashlib_new
-from math import ceil, log2, sqrt
+from math import ceil, sqrt
 from mimetypes import guess_extension as guess_mimetype_extension
 from mmap import ACCESS_READ, mmap
 from os import PathLike
 from pathlib import Path
 from re import search as re_search
-from typing import Any, Final, Literal
+from typing import Any, Literal
 from urllib.parse import unquote, urlparse
 
 # Third-party modules
@@ -29,20 +29,21 @@ from rich.text import Text
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 
 # Local imports
-from .exceptions import HashVerificationError, InvalidArgumentError, InvalidFileSizeError, RemoteFileError
-
-
-REQUIRED_HEADERS: Final[tuple[dict[str, str], ...]] = ({"Accept-Encoding": "identity"},)
-DEFAULT_HEADERS: Final[tuple[dict[str, str], ...]] = (
-    {"Accept": "*/*"},
-    {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36"},
+from .constants import (
+    DEFAULT_HEADERS,
+    MAX_CHUNK_SIZE,
+    MAX_CONNECTIONS,
+    MIN_CHUNK_SIZE,
+    MIN_CONNECTIONS,
+    ONE_GB,
+    ONE_KB,
+    ONE_MB,
+    RAM_FILESYSTEMS,
+    REQUIRED_HEADERS,
+    SIZE_UNITS,
+    YES_NO_VALUES,
 )
-ONE_MB: Final[int] = 1048576
-ONE_GB: Final[int] = 1073741824
-RAM_FILESYSTEMS: Final[frozenset[str]] = frozenset({"tmpfs", "ramfs", "devtmpfs"})
-SIZE_UNITS: Final[tuple[str, ...]] = ("B", "KB", "MB", "GB", "TB")
-BYTES_IN_UNIT: Final[int] = 1024
-YES_NO_VALUES: Final[tuple[Literal["no"], Literal["yes"]]] = ("no", "yes")
+from .exceptions import HashVerificationError, InvalidArgumentError, InvalidFileSizeError, RemoteFileError
 
 
 @dataclass
@@ -287,7 +288,7 @@ def format_size(size_bytes: int) -> str:
         return "0.00 B"
 
     unit_index = min(len(SIZE_UNITS) - 1, int(size_bytes.bit_length() / 10))
-    size = size_bytes / (BYTES_IN_UNIT**unit_index)
+    size = size_bytes / (ONE_KB**unit_index)
 
     return f"{size:.2f} {SIZE_UNITS[unit_index]}"
 
@@ -297,17 +298,18 @@ def bool_to_yes_no(value: bool) -> Literal["yes", "no"]:
 
 
 def generate_chunk_ranges(size_bytes: int, max_connections: int) -> list[tuple[int, int]]:
-    chunk_size = ceil(size_bytes / max_connections)
+    chunk_size = max(MIN_CHUNK_SIZE, min(ceil(size_bytes / max_connections), MAX_CHUNK_SIZE))
 
     ranges = []
     start = 0
+    remaining_bytes = size_bytes
 
-    while size_bytes > 0:
-        current_chunk = min(chunk_size, size_bytes)
+    while remaining_bytes > 0:
+        current_chunk = min(chunk_size, remaining_bytes)
         end = start + current_chunk - 1
         ranges.append((start, end))
         start = end + 1
-        size_bytes -= current_chunk
+        remaining_bytes -= current_chunk
 
     return ranges
 
@@ -315,31 +317,32 @@ def generate_chunk_ranges(size_bytes: int, max_connections: int) -> list[tuple[i
 def calculate_max_connections(size_bytes: int, connection_speed_mbps: float) -> int:
     size_mb = size_bytes / (1024 * 1024)
 
-    beta = 5.6
-    base_size = 1.0
-    conn_float = beta * (log2(1 + size_mb / base_size) * sqrt(connection_speed_mbps / 100))
+    if size_mb <= 10:
+        base_connections = 4
+    elif size_mb <= 100:
+        base_connections = 8
+    else:
+        base_connections = min(16, ceil(sqrt(size_mb) / 1.5))
 
-    return max(2, min(24, ceil(conn_float)))
+    speed_factor = min(2.5, (connection_speed_mbps / 50))
+    connections = max(MIN_CONNECTIONS, min(MAX_CONNECTIONS, ceil(base_connections * speed_factor)))
+
+    return connections
 
 
 def verify_hash(file_path: str | PathLike, expected_hash: str, hash_type: str, chunk_size: int = ONE_MB) -> None:
     file_path = Path(file_path)
 
     hasher = hashlib_new(hash_type)
-    file_size = file_path.stat().st_size
 
-    if file_size < chunk_size:
-        with file_path.open("rb") as f:
-            hasher.update(f.read())
-    else:
-        with file_path.open("rb") as f, mmap(f.fileno(), 0, access=ACCESS_READ) as mm:
-            while True:
-                chunk = mm.read(chunk_size)
+    with file_path.open("rb") as f, mmap(f.fileno(), 0, access=ACCESS_READ) as mm:
+        while True:
+            chunk = mm.read(chunk_size)
 
-                if not chunk:
-                    break
+            if not chunk:
+                break
 
-                hasher.update(chunk)
+            hasher.update(chunk)
 
     file_hash = hasher.hexdigest()
 

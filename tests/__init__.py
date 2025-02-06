@@ -1,3 +1,1 @@
-"""
-TurboDL test suite.
-"""
+"""TurboDL test suite."""
