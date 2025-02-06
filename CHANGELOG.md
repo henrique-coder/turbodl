@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.3.5] - ()
+## [0.3.5] - (Performance & Stability Improvements)
 #### Changed
 - Moved all constants to a dedicated constants.py file
 - Updated chunk buffer values
@@ -22,7 +22,7 @@
 - Code formatting with ruff linter
 - Changed minimum "max connections" to 2 instead of 4
 - Enhanced chunk range generator
-- Increased keepalive time and reduced max connections to 32
+- Increased keepalive time and reduced max connections to 24
 - Various CLI options and configurations
 
 ## [0.3.4] - (Hotfixes)
