@@ -35,7 +35,7 @@ def check_for_updates() -> None:
         if latest_version > __version__:
             console.print(
                 f"[yellow]Update available![/] Current version: [red]{__version__}[/] → Latest version: [green]{latest_version}[/]\n"
-                "\nTo update, run: [bold cyan]pip install -U turbodl[/]"
+                "\nTo update, run: [bold cyan]pip install --upgrade turbodl[/]"
             )
         else:
             console.print(f"[green]TurboDL is up to date![/] Current version: [bold]{__version__}[/]")
