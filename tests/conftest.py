@@ -14,7 +14,7 @@ from turbodl import TurboDL
 def downloader() -> TurboDL:
     """Return a configured TurboDL instance."""
 
-    return TurboDL(max_connections="auto", connection_speed_mbps=1000, show_progress_bar=True, save_log_file=True)
+    return TurboDL(max_connections="auto", connection_speed_mbps=1000, show_progress_bar=True)
 
 
 @fixture
