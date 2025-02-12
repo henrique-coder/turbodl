@@ -15,9 +15,12 @@ concurrency:
 
 jobs:
   test:
-    name: 🧪 Run Tests
-    runs-on: ubuntu-22.04
-    timeout-minutes: 10
+    name: 🧪 Tests on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, windows-latest, macos-latest]
 
     steps:
       - name: 🔒 Security Scan Dependencies
@@ -45,7 +48,7 @@ jobs:
       - name: 📚 Install Dependencies
         run: poetry install --with test
 
-      - name: 🧪 Run Tests via Makefile
+      - name: 🧪 Run Tests
         id: tests
         run: make tests
 
@@ -54,8 +57,21 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
+            const os = '${{ matrix.os }}'.replace('-latest', '');
             const success = '${{ steps.tests.outcome }}' === 'success';
-            const message = `## 🧪 Test Results\n\n${success ? '✅ All tests passed' : '❌ Tests failed'}\n\nFor details, check the [test run](${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID})`;
+            const emoji = success ? '✅' : '❌';
+            const status = success ? 'passed' : 'failed';
+            const header = `### ${emoji} Test Results for ${os}\n\n`;
+            const details = [
+              `**OS**: ${os}`,
+              `**Python Version**: 3.13`,
+              `**Status**: ${status}`,
+              `**Run ID**: ${process.env.GITHUB_RUN_ID}`,
+              '',
+              `[View Details](${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID})`
+            ].join('\n');
+
+            const message = header + details;
 
             await github.rest.issues.createComment({
               issue_number: context.issue.number,
