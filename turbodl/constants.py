@@ -7,7 +7,7 @@ ONE_MB: Final[int] = 1048576
 ONE_GB: Final[int] = 1073741824
 
 # Chunk size constants
-MIN_CHUNK_SIZE: Final[int] = 33554432  # 32 MB
+MIN_CHUNK_SIZE: Final[int] = 16777216  # 16 MB
 MAX_CHUNK_SIZE: Final[int] = 268435456  # 256 MB
 CHUNK_SIZE: Final[int] = 268435456  # 256 MB
 MAX_BUFFER_SIZE: Final[int] = 2147483648  # 2 GB

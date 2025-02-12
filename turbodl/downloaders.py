@@ -16,24 +16,16 @@ from .loggers import LogToFile
 from .utils import download_retry_decorator
 
 
-def download_with_buffer_writer(
-    output_path: str | PathLike, size_bytes: int, position: int, data: bytes, logger: LogToFile
-) -> None:
-    logger.debug(f"Writing {len(data)} bytes to {output_path} at position {position}")
-
+def download_with_buffer_writer(output_path: str | PathLike, size_bytes: int, position: int, data: bytes) -> None:
     with Path(output_path).open("r+b") as f:
         current_size = f.seek(0, 2)
 
         if current_size < size_bytes:
-            logger.debug(f"Pre-allocating file space to {size_bytes}")
-
             ftruncate(f.fileno(), size_bytes)
 
         with mmap(f.fileno(), length=size_bytes, access=ACCESS_WRITE) as mm:
             mm[position : position + len(data)] = data
             mm.flush()
-
-            logger.debug(f"Finished writing {len(data)} bytes to {output_path}")
 
 
 @download_retry_decorator
@@ -62,20 +54,14 @@ def download_with_buffer_worker(
         r.raise_for_status()
 
         for data in r.iter_bytes(chunk_size=1024 * 1024):
-            logger.debug(f"Received {len(data)} bytes for chunk {chunk_id + 1}")
-
             if complete_chunk := chunk_buffers[chunk_id].write(data, size_bytes):
-                download_with_buffer_writer(output_path, size_bytes, start + write_positions[chunk_id], complete_chunk, logger)
-
-                logger.debug(f"Wrote {len(complete_chunk)} bytes to file")
-
+                download_with_buffer_writer(output_path, size_bytes, start + write_positions[chunk_id], complete_chunk)
                 write_positions[chunk_id] += len(complete_chunk)
 
             progress.update(TaskID(task_id), advance=len(data))
 
         if remaining := chunk_buffers[chunk_id].current_buffer.getvalue():
-            download_with_buffer_writer(output_path, size_bytes, start + write_positions[chunk_id], remaining, logger)
-            logger.debug(f"Wrote {len(remaining)} bytes remaining to file")
+            download_with_buffer_writer(output_path, size_bytes, start + write_positions[chunk_id], remaining)
 
         logger.debug(f"Finished thread for chunk {chunk_id + 1}")
 
@@ -119,14 +105,7 @@ def download_with_buffer(
 
 @download_retry_decorator
 def download_without_buffer_worker(
-    http_client: Client,
-    url: str,
-    output_path: str | PathLike,
-    start: int,
-    end: int,
-    task_id: int,
-    progress: Progress,
-    logger: LogToFile,
+    http_client: Client, url: str, output_path: str | PathLike, start: int, end: int, task_id: int, progress: Progress
 ) -> None:
     write_lock = Lock()
 
@@ -139,14 +118,10 @@ def download_without_buffer_worker(
         for data in r.iter_bytes(chunk_size=1024 * 1024):
             chunk_len = len(data)
 
-            logger.debug(f"Received {chunk_len} bytes for chunk {start}-{end}")
-
             with write_lock, Path(output_path).open("r+b") as fo:
                 fo.seek(start)
                 fo.write(data)
                 start += chunk_len
-
-            logger.debug(f"Wrote {chunk_len} bytes to file at position {start}")
 
             progress.update(TaskID(task_id), advance=chunk_len)
 
@@ -160,11 +135,11 @@ def download_without_buffer(
     progress: Progress,
     logger: LogToFile,
 ) -> None:
-    logger.info("Starting download without buffer")
+    logger.info("Starting download without RAM buffer")
 
     with ThreadPoolExecutor(max_workers=len(chunk_ranges)) as executor:
         futures = [
-            executor.submit(download_without_buffer_worker, http_client, url, output_path, start, end, task_id, progress, logger)
+            executor.submit(download_without_buffer_worker, http_client, url, output_path, start, end, task_id, progress)
             for start, end in chunk_ranges
         ]
 
@@ -172,7 +147,7 @@ def download_without_buffer(
             try:
                 future.result()
             except Exception as e:
-                logger.error(f"Error in download_without_buffer_worker: {e}")
+                logger.error(f"Download failed: {e}")
 
                 raise e
 
