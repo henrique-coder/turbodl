@@ -12,7 +12,8 @@ __pycache__
 
 # Files
 dev.py
-assets/demo.cast
+demo.cast
+demo.gif
 
 # Extensions
 # ...
