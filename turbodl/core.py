@@ -136,7 +136,7 @@ class TurboDL:
             raise e
 
         url: str = remote_file_info.url
-        filename: str = remote_file_info.filename + ".turbodownload"
+        filename: str = remote_file_info.filename
         mimetype: str = remote_file_info.mimetype
         size: int = remote_file_info.size
 
@@ -159,6 +159,7 @@ class TurboDL:
         # Check if there is enough space to download the file
         if not has_available_space(self._output_path, size):
             self._logger.error(f"Not enough space to download {filename}")
+
             raise NotEnoughSpaceError(f"Not enough space to download {filename}")
 
         # If output path is a directory, append filename
@@ -201,7 +202,7 @@ class TurboDL:
                     f"[bold bright_black]╭ [green]Downloading [blue]{url} [bright_black]• [green]{'~' + format_size(size) if size is not None else 'Unknown'}"
                 )
                 self._console.print(
-                    f"[bold bright_black]│ [green]Output file: [cyan]{self._output_path.with_suffix('').as_posix()} (.turbodownload) [bright_black]• [green]RAM directory/buffer: [cyan]{bool_to_yes_no(is_ram_dir)}/{bool_to_yes_no(enable_ram_buffer)} [bright_black]• [green]Connections: [cyan]{self._max_connections} [bright_black]• [green]Speed: [cyan]{self._connection_speed_mbps} Mbps"
+                    f"[bold bright_black]│ [green]Output file: [cyan]{self._output_path.as_posix()} [bright_black]• [green]RAM directory/buffer: [cyan]{bool_to_yes_no(is_ram_dir)}/{bool_to_yes_no(enable_ram_buffer)} [bright_black]• [green]Connections: [cyan]{self._max_connections} [bright_black]• [green]Speed: [cyan]{self._connection_speed_mbps} Mbps"
                 )
 
             # Set up progress bar and start download
@@ -256,10 +257,6 @@ class TurboDL:
             self._cleanup()
 
             raise e
-
-        # Remove the .turbodownload suffix
-        self._output_path.rename(self._output_path.with_suffix(""))
-        self._output_path = self._output_path.with_suffix("")
 
         self._logger.info(f"Download completed. Saved to: {self._output_path.as_posix()}")
 
