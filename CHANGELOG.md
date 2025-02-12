@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.3.6] - (Bug Fixes & Performance Improvements)
+#### Changed
+- Updated CLI demo gif
+- Updated Makefile
+
+#### Added
+- Added a new logger system (always log everything to a file, located at {TEMP_DIR}/turbodl.log)
+
+#### Fixed
+- Size formatting issues
+
+#### Removed
+- Unused constants
+- --save-log-file CLI option
+- assets directory
+
 ## [0.3.5] - (Performance & Stability Improvements)
 #### Changed
 - Moved all constants to a dedicated constants.py file
