@@ -2,7 +2,7 @@
 # Put this file (ruff.toml) in your project root folder and run `ruff check` or `ruff format` (make sure to run `pip install --upgrade ruff` first).
 
 include = ["*.py"]
-exclude = [".idea", ".venv", "__pycache__", ".ruff_cache"]
+exclude = [".idea", ".venv", "__pycache__", ".ruff_cache", ".pytest_cache"]
 target-version = "py313"
 line-length = 130
 indent-width = 4

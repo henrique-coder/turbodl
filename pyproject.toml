@@ -51,13 +51,14 @@ repository = "https://github.com/henrique-coder/turbodl"
 [tool.poetry.dependencies]
 python = "^3.10"
 httpx = "0.28.1"
+humanfriendly = "10.0"
 psutil = "6.1.1"
 rich = "13.9.4"
 tenacity = "9.0.0"
 typer = "0.15.1"
 
 [tool.poetry.group.lint.dependencies]
-ruff = "0.9.4"
+ruff = "0.9.6"
 
 [tool.poetry.group.test.dependencies]
 pytest = "8.3.4"
