@@ -36,11 +36,9 @@ from .constants import (
     MIN_CHUNK_SIZE,
     MIN_CONNECTIONS,
     ONE_GB,
-    ONE_KB,
     ONE_MB,
     RAM_FILESYSTEMS,
     REQUIRED_HEADERS,
-    SIZE_UNITS,
     YES_NO_VALUES,
 )
 from .exceptions import HashVerificationError, InvalidArgumentError, InvalidFileSizeError, RemoteFileError
@@ -281,16 +279,6 @@ def fetch_file_info(http_client: Client, url: str) -> RemoteFileInfo:
         filename = f"{filename}{ext}"
 
     return RemoteFileInfo(url=str(r.url), filename=filename, mimetype=content_type, size=size)
-
-
-def format_size(size_bytes: int) -> str:
-    if size_bytes == 0:
-        return "0.00 B"
-
-    unit_index = min(len(SIZE_UNITS) - 1, int(size_bytes.bit_length() / 10))
-    size = size_bytes / (ONE_KB**unit_index)
-
-    return f"{size:.2f} {SIZE_UNITS[unit_index]}"
 
 
 def bool_to_yes_no(value: bool) -> Literal["yes", "no"]:
