@@ -36,10 +36,10 @@ tests:
 	poetry run pytest -v
 
 demo:
-	asciinema rec "assets/demo.cast" --overwrite --rows 5 --cols 135 --title "TurboDL CLI Demo (https://github.com/henrique-coder/turbodl)" --command "turbodl download -cs 700 https://testfile.org/1.3GBiconpng /tmp"
-	agg "assets/demo.cast" "assets/demo.gif"
+	asciinema rec "demo.cast" --overwrite --rows 5 --cols 135 --title "TurboDL CLI Demo (https://github.com/henrique-coder/turbodl)" --command "turbodl download -cs 700 https://link.testfile.org/500MB /tmp"
+	agg "demo.cast" "demo.gif"
 	@echo -n "Do you want to upload the generated gif to asciinema (y/N): "
 	@read answer; \
 	if [ "$$answer" = "y" ] || [ "$$answer" = "Y" ]; then \
-		asciinema upload "assets/demo.cast"; \
+		asciinema upload "demo.cast"; \
 	fi
