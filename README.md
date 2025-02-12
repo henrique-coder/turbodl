@@ -53,7 +53,6 @@ turbodl = TurboDL(
     max_connections="auto",
     connection_speed_mbps=80,
     show_progress_bar=True,
-    save_log_file=False,
 )
 turbodl.download(
     url="https://example.com/file.txt",
