@@ -3,7 +3,6 @@ from typing import Final, Literal
 
 
 # Size constants
-ONE_KB: Final[int] = 1024
 ONE_MB: Final[int] = 1048576
 ONE_GB: Final[int] = 1073741824
 
@@ -28,13 +27,4 @@ DEFAULT_HEADERS: Final[tuple[dict[str, str], ...]] = (
 REQUIRED_HEADERS: Final[tuple[dict[str, str], ...]] = ({"Accept-Encoding": "identity"},)
 
 # Units and values
-SIZE_UNITS: Final[tuple[str, ...]] = (
-    "B",
-    "KB",
-    "MB",
-    "GB",
-    "TB",
-    "PB",
-    "EB",
-)  # Byte, kilobyte, megabyte, gigabyte, terabyte, petabyte, exabyte
 YES_NO_VALUES: Final[tuple[Literal["no"], Literal["yes"]]] = ("no", "yes")  # "no", "yes"
