@@ -88,7 +88,7 @@ def download(
     ),
     timeout: int = Option(None, "--timeout", "-t", help="Download timeout in seconds."),
     expected_hash: str = Option(None, "--expected-hash", "-eh", help="Expected file hash for verification."),
-    hash_type: str = Option("md5", "--hash-type", "-ht", help="Hash algorithm for verification."),
+    hash_type: str = Option("md5", "--hash-type", "-ht", help="Hash algorithm for verification. Available: md5, sha1, sha224, sha256, sha384, sha512, blake2b, blake2s, sha3_224, sha3_256, sha3_384, sha3_512, shake_128, shake_256"),
 ) -> None:
     """Download a file from the provided URL to the specified output path (with a lot of options)"""
 
