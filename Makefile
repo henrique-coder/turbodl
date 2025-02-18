@@ -36,7 +36,7 @@ tests:
 	poetry run pytest -v
 
 demo:
-	asciinema rec "demo.cast" --overwrite --rows 5 --cols 135 --title "TurboDL CLI Demo (https://github.com/henrique-coder/turbodl)" --command "turbodl download -cs 700 https://link.testfile.org/500MB /tmp"
+	asciinema rec "demo.cast" --overwrite --rows 4 --cols 112 --title "TurboDL CLI Demo (https://github.com/henrique-coder/turbodl)" --command "turbodl download -cs 700 https://link.testfile.org/300MB /tmp"
 	agg "demo.cast" "assets/demo.gif"
 	@echo -n "Do you want to upload the recording to asciinema (y/N): "
 	@read answer; if [ "$$answer" = "y" ] || [ "$$answer" = "Y" ]; then asciinema upload "demo.cast"; fi
