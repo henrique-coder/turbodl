@@ -28,3 +28,6 @@ REQUIRED_HEADERS: Final[tuple[dict[str, str], ...]] = ({"Accept-Encoding": "iden
 
 # Units and values
 YES_NO_VALUES: Final[tuple[Literal["no"], Literal["yes"]]] = ("no", "yes")
+
+# Max RAM usage constants
+MAX_RAM_USAGE: Final[float] = 0.30  # Maximum percentage of available RAM (e.g., 0.30 = 30%)
