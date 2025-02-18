@@ -28,6 +28,7 @@ from .utils import (
     generate_chunk_ranges,
     has_available_space,
     is_ram_directory,
+    truncate_url,
     validate_headers,
     verify_hash,
 )
@@ -37,13 +38,14 @@ class TurboDL:
     def __init__(
         self, max_connections: int | Literal["auto"] = "auto", connection_speed_mbps: float = 80.0, show_progress_bar: bool = True
     ) -> None:
-        # Setup signal handlers
+        # Setup signal handlers for clean exit
         self._setup_signal_handlers()
 
-        # Validate arguments
+        # Validate max_connections argument
         if isinstance(max_connections, int) and not 1 <= max_connections <= 32:
             raise InvalidArgumentError("max_connections must be between 1 and 32")
 
+        # Validate connection_speed_mbps argument
         if connection_speed_mbps <= 0:
             raise InvalidArgumentError("connection_speed_mbps must be positive")
 
@@ -199,10 +201,10 @@ class TurboDL:
             # Set up progress bar header text
             if self._show_progress_bar:
                 self._console.print(
-                    f"[bold bright_black]╭ [green]Downloading [blue]{url} [bright_black]• [green]{'~' + format_size(size) if size is not None else 'Unknown'}"
+                    f"[bold bright_black]╭ [green]Downloading [blue]{truncate_url(url)} [bright_black]• [green]{'~' + format_size(size) if size is not None else 'Unknown'}"
                 )
                 self._console.print(
-                    f"[bold bright_black]│ [green]Output file: [cyan]{self._output_path.as_posix()} [bright_black]• [green]RAM directory/buffer: [cyan]{bool_to_yes_no(is_ram_dir)}/{bool_to_yes_no(enable_ram_buffer)} [bright_black]• [green]Connections: [cyan]{self._max_connections} [bright_black]• [green]Speed: [cyan]{self._connection_speed_mbps} Mbps"
+                    f"[bold bright_black]│ [green]Output file: [cyan]{self._output_path.as_posix()} [bright_black]• [green]RAM buffer: [cyan]{bool_to_yes_no(enable_ram_buffer)} [bright_black]• [green]Connections: [cyan]{self._max_connections}"
                 )
 
             # Set up progress bar and start download

@@ -9,6 +9,7 @@ from mmap import ACCESS_READ, mmap
 from os import PathLike
 from pathlib import Path
 from re import search as re_search
+from shutil import get_terminal_size
 from typing import Any, Literal
 from urllib.parse import unquote, urlparse
 
@@ -260,8 +261,10 @@ def fetch_file_info(http_client: Client, url: str) -> RemoteFileInfo:
         elif match := re_search(r'filename=["\']*([^"\']+)', content_disposition):
             filename = match.group(1)
 
+    url = unquote(str(r.url))
+
     if not filename:
-        path = urlparse(str(r.url)).path
+        path = urlparse(url).path
 
         if path and path != "/":
             filename = Path(unquote(path)).name
@@ -278,7 +281,7 @@ def fetch_file_info(http_client: Client, url: str) -> RemoteFileInfo:
     if "." not in filename and (ext := guess_mimetype_extension(content_type)):
         filename = f"{filename}{ext}"
 
-    return RemoteFileInfo(url=str(r.url), filename=filename, mimetype=content_type, size=size)
+    return RemoteFileInfo(url=url, filename=filename, mimetype=content_type, size=size)
 
 
 def bool_to_yes_no(value: bool) -> Literal["yes", "no"]:
@@ -340,3 +343,46 @@ def verify_hash(file_path: str | PathLike, expected_hash: str, hash_type: str, c
         )
 
     return None
+
+
+def truncate_url(url: str, max_width: int | None = None, truncate_indicator: str = "…") -> str:
+    if max_width is None:
+        max_width = get_terminal_size().columns
+
+    size_text_max_length: int = 15
+    prefix_length: int = 14
+    suffix_length: int = 3
+
+    available_width: int = max_width - prefix_length - size_text_max_length - suffix_length
+
+    if len(url) <= available_width:
+        return url
+
+    parsed = urlparse(url)
+    scheme: str = parsed.scheme + "://"
+    domain: str = parsed.netloc
+
+    base_url: str = scheme + domain + "/" + truncate_indicator + "/"
+    remaining_space: int = available_width - len(base_url)
+
+    if remaining_space < 10:
+        return scheme + domain + "/" + truncate_indicator
+
+    filename: str = parsed.path.split("/")[-1]
+
+    if len(filename) > remaining_space:
+        name_parts: list[str] = filename.split(".")
+
+        if len(name_parts) > 1:
+            extension: str = "." + name_parts[-1]
+            name: str = ".".join(name_parts[:-1])
+            max_name_length: int = remaining_space - len(extension) - len(truncate_indicator)
+
+            if max_name_length > 0:
+                return f"{base_url}{name[: max_name_length // 2]}{truncate_indicator}{name[-max_name_length // 2 :]}{extension}"
+
+        max_length: int = remaining_space - len(truncate_indicator)
+
+        return f"{base_url}{filename[: max_length // 2]}{truncate_indicator}{filename[-max_length // 2 :]}"
+
+    return f"{base_url}{filename}"
