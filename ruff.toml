@@ -11,7 +11,7 @@ preview = true
 [lint]
 preview = true
 fixable = ["ALL"]
-select = ["E4", "E7", "E9", "F", "UP", "B", "SIM", "D200", "D204", "D212", "D403", "PERF102", "PERF401", "S602"]
+select = ["E4", "E7", "E9", "F", "UP", "B", "SIM", "D200", "D204", "D403", "PERF102", "PERF401", "S602"]
 dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 
 [lint.isort]
