@@ -58,7 +58,7 @@ tenacity = "9.0.0"
 typer = "0.15.1"
 
 [tool.poetry.group.lint.dependencies]
-ruff = "0.9.6"
+ruff = "0.9.7"
 
 [tool.poetry.group.test.dependencies]
 pytest = "8.3.4"
