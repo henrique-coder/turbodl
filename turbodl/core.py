@@ -34,14 +34,14 @@ from .utils import (
 
 class TurboDL:
     def __init__(
-        self, max_connections: int | Literal["auto"] = "auto", connection_speed_mbps: float = 80, show_progress_bar: bool = True
+        self, max_connections: int | Literal["auto"] = "auto", connection_speed_mbps: float = 100, show_progress_bar: bool = True
     ) -> None:
         """
         Initialize a TurboDL instance with specified settings.
 
         Args:
-            max_connections (int | Literal['auto']): Maximum connections for downloading. Defaults to 'auto'.
-            connection_speed_mbps (float): Connection speed in Mbps for optimal performance. Defaults to 80.
+            max_connections (int | Literal['auto']): Maximum connections for downloading. Maximum value is 32. Defaults to 'auto'.
+            connection_speed_mbps (float): Connection speed in Mbps for optimal performance. Defaults to 100.
             show_progress_bar (bool): Flag to display the progress bar. Defaults to True.
         """
 
@@ -73,18 +73,46 @@ class TurboDL:
         self.output_path: str | None = None
 
     def _setup_signal_handlers(self) -> None:
+        """
+        Setup signal handlers for clean exit on SIGINT (Ctrl+C) and SIGTERM.
+
+        This is useful for cleaning up temporary files and closing the HTTP client.
+        """
+
+        # Setup signal handlers for clean exit
         for sig in (SIGINT, SIGTERM):
+            # Set the signal handler
             signal(sig, self._signal_handler)
 
     def _signal_handler(self, signum: Signals, frame: FrameType | None) -> NoReturn:
+        """
+        Handle received signals for a clean exit.
+
+        This method is called when the process receives a termination signal (e.g., SIGINT or SIGTERM). It ensures that necessary cleanup is performed before exiting the application.
+
+        Args:
+            signum (Signals): The signal number received.
+            frame (FrameType | None): The current stack frame.
+        """
+
+        # Perform cleanup operations
         self._cleanup()
 
+        # Exit the application with a status code of 0
         exit(0)
 
     def _cleanup(self) -> None:
+        """
+        Perform cleanup operations before exiting the application.
+
+        This method is called when the process receives a termination signal (e.g., SIGINT or SIGTERM) or when the application completes execution. It ensures that necessary cleanup is performed, such as deleting temporary files and closing the HTTP client.
+        """
+
+        # Remove temporary files if they exist
         if isinstance(self._output_path, Path):
             self._output_path.unlink(missing_ok=True)
 
+        # Close the HTTP client to free up system resources
         if hasattr(self, "_http_client"):
             self._http_client.close()
 
