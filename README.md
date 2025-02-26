@@ -6,16 +6,17 @@
 ![PyPI - Format](https://img.shields.io/pypi/format/turbodl?style=flat&logo=pypi&logoColor=blue&color=blue&link=https://pypi.org/project/turbodl)
 ![PyPI - Python Compatible Versions](https://img.shields.io/pypi/pyversions/turbodl?style=flat&logo=python&logoColor=blue&color=blue&link=https://pypi.org/project/turbodl)
 
-TurboDL is an extremely smart, fast, and efficient download manager with several automations.
+TurboDL is an extremely smart, fast, and efficient download manager designed to optimize your downloading experience.
 
-- Built-in sophisticated download acceleration technique.
-- Uses a sophisticated algorithm to calculate the optimal number of connections based on file size and connection speed.
-- Retry failed requests efficiently.
-- Automatically detects file information before download.
-- Automatically handles redirects.
-- Automatically uses RAM buffer to speed up downloads and reduce disk I/O overhead.
-- Supports post-download hash verification.
-- Accurately displays a beautiful progress bar.
+- **Smart Connection Management**: Dynamically calculates the optimal number of connections based on file size and network speed to maximize throughput
+- **Intelligent Acceleration**: Built-in sophisticated download acceleration techniques that split downloads into multiple parallel streams
+- **Automatic Retry System**: Efficiently retries failed requests with exponential backoff strategy to handle network instabilities
+- **Pre-Download Intelligence**: Automatically detects file information, size, and type before download begins
+- **Seamless Redirection**: Handles HTTP redirects automatically to ensure downloads complete successfully
+- **Memory Optimization**: Intelligently uses RAM buffering to reduce disk I/O overhead and increase performance
+- **Data Integrity**: Supports post-download hash verification (MD5, SHA256, etc.) to ensure file integrity
+- **Real-time Feedback**: Provides an elegant, accurate progress bar with detailed download statistics
+- **Cross-platform Compatibility**: Works consistently across all major operating systems
 
 <br>
 
