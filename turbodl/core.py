@@ -3,7 +3,6 @@ from os import PathLike
 from pathlib import Path
 from signal import SIGINT, SIGTERM, Signals, signal
 from sys import exit
-from tempfile import gettempdir
 from types import FrameType
 from typing import Literal, NoReturn
 
@@ -17,7 +16,6 @@ from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn
 from .buffers import ChunkBuffer
 from .downloaders import download_with_buffer, download_without_buffer
 from .exceptions import DownloadInterruptedError, InvalidArgumentError, NotEnoughSpaceError
-from .loggers import LogToFile
 from .utils import (
     CustomDownloadColumn,
     CustomSpeedColumn,
@@ -28,6 +26,7 @@ from .utils import (
     generate_chunk_ranges,
     has_available_space,
     is_ram_directory,
+    truncate_url,
     validate_headers,
     verify_hash,
 )
@@ -35,15 +34,25 @@ from .utils import (
 
 class TurboDL:
     def __init__(
-        self, max_connections: int | Literal["auto"] = "auto", connection_speed_mbps: float = 80.0, show_progress_bar: bool = True
+        self, max_connections: int | Literal["auto"] = "auto", connection_speed_mbps: float = 100, show_progress_bar: bool = True
     ) -> None:
-        # Setup signal handlers
+        """
+        Initialize a TurboDL instance with specified settings.
+
+        Args:
+            max_connections (int | Literal['auto']): Maximum connections for downloading. Maximum value is 32. Defaults to 'auto'.
+            connection_speed_mbps (float): Connection speed in Mbps for optimal performance. Defaults to 100.
+            show_progress_bar (bool): Flag to display the progress bar. Defaults to True.
+        """
+
+        # Setup signal handlers for clean exit
         self._setup_signal_handlers()
 
-        # Validate arguments
+        # Validate max_connections argument
         if isinstance(max_connections, int) and not 1 <= max_connections <= 32:
             raise InvalidArgumentError("max_connections must be between 1 and 32")
 
+        # Validate connection_speed_mbps argument
         if connection_speed_mbps <= 0:
             raise InvalidArgumentError("connection_speed_mbps must be positive")
 
@@ -52,7 +61,6 @@ class TurboDL:
         self._connection_speed_mbps: float = connection_speed_mbps
         self._show_progress_bar: bool = show_progress_bar
         self._output_path: Path | None = None
-        self._logger: LogToFile = LogToFile(log_file_path=Path(gettempdir(), "turbodl.log"), overwrite=False)
         self._console: Console = Console()
         self._http_client: Client = Client(
             follow_redirects=True,
@@ -65,18 +73,46 @@ class TurboDL:
         self.output_path: str | None = None
 
     def _setup_signal_handlers(self) -> None:
+        """
+        Setup signal handlers for clean exit on SIGINT (Ctrl+C) and SIGTERM.
+
+        This is useful for cleaning up temporary files and closing the HTTP client.
+        """
+
+        # Setup signal handlers for clean exit
         for sig in (SIGINT, SIGTERM):
+            # Set the signal handler
             signal(sig, self._signal_handler)
 
     def _signal_handler(self, signum: Signals, frame: FrameType | None) -> NoReturn:
+        """
+        Handle received signals for a clean exit.
+
+        This method is called when the process receives a termination signal (e.g., SIGINT or SIGTERM). It ensures that necessary cleanup is performed before exiting the application.
+
+        Args:
+            signum (Signals): The signal number received.
+            frame (FrameType | None): The current stack frame.
+        """
+
+        # Perform cleanup operations
         self._cleanup()
 
+        # Exit the application with a status code of 0
         exit(0)
 
     def _cleanup(self) -> None:
+        """
+        Perform cleanup operations before exiting the application.
+
+        This method is called when the process receives a termination signal (e.g., SIGINT or SIGTERM) or when the application completes execution. It ensures that necessary cleanup is performed, such as deleting temporary files and closing the HTTP client.
+        """
+
+        # Remove temporary files if they exist
         if isinstance(self._output_path, Path):
             self._output_path.unlink(missing_ok=True)
 
+        # Close the HTTP client to free up system resources
         if hasattr(self, "_http_client"):
             self._http_client.close()
 
@@ -107,65 +143,63 @@ class TurboDL:
             "shake_256",
         ] = "md5",
     ) -> None:
-        self._logger.info(f"Starting download of {url}")
+        """Download a file from the given URL to the specified output path.
 
-        # Validate arguments
+        Args:
+            url (str): The URL of the file to download.
+            output_path (str | PathLike | None): The path to save the downloaded file. If it is a directory, filename is derived from server response. If None, the current working directory is used. Defaults to None.
+            pre_allocate_space (bool): Whether to pre-allocate disk space for the file. Defaults to False.
+            enable_ram_buffer (bool | Literal["auto"]): Use RAM buffer for download. If set to False, the file will be downloaded continuously to disk. If set to True, the file will be downloaded with the help of RAM memory. If set to "auto", the RAM buffer will be disabled if the output path is a RAM directory and enabled otherwise. Defaults to "auto".
+            overwrite (bool): Overwrite existing file if true. Defaults to True.
+            headers (dict[str, str] | None): Additional headers for the request. Defaults to None.
+            timeout (int | None): Timeout for the download request. Defaults to None.
+            expected_hash (str | None): Expected hash for file verification. Defaults to None.
+            hash_type (Literal): Hash algorithm to use for verification. Available: md5, sha1, sha224, sha256, sha384, sha512, blake2b, blake2s, sha3_224, sha3_256, sha3_384, sha3_512, shake_128, shake_256. Defaults to "md5".
+
+        Raises:
+            NotEnoughSpaceError: If there's not enough space to download the file.
+            DownloadInterruptedError: If the download is interrupted by the user.
+        """
+
+        # Validate and set headers and timeout
         self._http_client.headers.update(validate_headers(headers))
         self._http_client.timeout = timeout
 
-        # Set the output path
+        # Set and resolve the output path
         self._output_path = Path.cwd() if output_path is None else Path(output_path).resolve()
-        self._logger.debug(f"Output path: {self._output_path}")
 
-        # Determine if the output path is a RAM directory and set the enable_ram_buffer argument accordingly
+        # Determine if output path is a RAM directory and set RAM buffer flag
         is_ram_dir = is_ram_directory(self._output_path)
-
-        self._logger.debug(f"Is RAM directory: {is_ram_dir} ({bool_to_yes_no(is_ram_dir)})")
 
         if enable_ram_buffer == "auto":
             enable_ram_buffer = not is_ram_dir
 
-        self._logger.debug(f"Enable RAM buffer: {enable_ram_buffer} ({bool_to_yes_no(enable_ram_buffer)})")
-
-        # Fetch file info
+        # Fetch file information from the server
         try:
             remote_file_info = fetch_file_info(self._http_client, url)
         except Exception as e:
-            self._logger.error(f"Error fetching file info: {e}")
-
             raise e
 
+        # Extract and log file details
         url: str = remote_file_info.url
-        filename: str = remote_file_info.filename + ".turbodownload"
-        mimetype: str = remote_file_info.mimetype
+        filename: str = remote_file_info.filename
         size: int = remote_file_info.size
 
-        self._logger.debug(f"URL: {url}")
-        self._logger.debug(f"Filename: {filename}")
-        self._logger.debug(f"Mimetype: {mimetype}")
-        self._logger.debug(f"Size: {size} ({format_size(size)})")
-
-        # Calculate the number of connections to use for the download
+        # Calculate optimal connections and chunk ranges
         if self._max_connections == "auto":
             self._max_connections = calculate_max_connections(size, self._connection_speed_mbps)
 
-        self._logger.debug(f"Max connections: {self._max_connections}")
-
-        # Calculate the optimal chunk ranges
         chunk_ranges = generate_chunk_ranges(size, self._max_connections)
 
-        self._logger.debug(f"Chunk ranges: {chunk_ranges} ({len(chunk_ranges)} chunk(s))")
-
-        # Check if there is enough space to download the file
+        # Check for available disk space
         if not has_available_space(self._output_path, size):
-            self._logger.error(f"Not enough space to download {filename}")
             raise NotEnoughSpaceError(f"Not enough space to download {filename}")
 
-        # If output path is a directory, append filename
+        # Append filename if output path is a directory
         if self._output_path.is_dir():
             self._output_path = Path(self._output_path, filename)
 
-        # Handle the case where output file already exists
+        # Handle existing files based on the overwrite flag
         if not overwrite:
             base_name = self._output_path.stem
             extension = self._output_path.suffix
@@ -176,10 +210,8 @@ class TurboDL:
                 counter += 1
 
         try:
-            # Handle pre-allocation of space if required
+            # Pre-allocate space if required
             if pre_allocate_space:
-                self._logger.info(f"Pre-allocating space for {size} bytes...")
-
                 with Progress(
                     SpinnerColumn(spinner_name="dots", style="bold cyan"),
                     TextColumn(f"[bold cyan]Pre-allocating space for {size} bytes...", justify="left"),
@@ -187,24 +219,21 @@ class TurboDL:
                     disable=not self._show_progress_bar,
                 ) as progress:
                     progress.add_task("", total=None)
-
                     with self._output_path.open("wb") as fo:
                         fo.truncate(size)
             else:
                 self._output_path.touch(exist_ok=True)
 
-            self._logger.info(f"Output file (in progress): {self._output_path.as_posix()}")
-
-            # Set up progress bar header text
+            # Display progress bar header
             if self._show_progress_bar:
                 self._console.print(
-                    f"[bold bright_black]╭ [green]Downloading [blue]{url} [bright_black]• [green]{'~' + format_size(size) if size is not None else 'Unknown'}"
+                    f"[bold bright_black]╭ [green]Downloading [blue]{truncate_url(url)} [bright_black]• [green]{'~' + format_size(size) if size is not None else 'Unknown'}"
                 )
                 self._console.print(
-                    f"[bold bright_black]│ [green]Output file: [cyan]{self._output_path.with_suffix('').as_posix()} (.turbodownload) [bright_black]• [green]RAM directory/buffer: [cyan]{bool_to_yes_no(is_ram_dir)}/{bool_to_yes_no(enable_ram_buffer)} [bright_black]• [green]Connections: [cyan]{self._max_connections} [bright_black]• [green]Speed: [cyan]{self._connection_speed_mbps} Mbps"
+                    f"[bold bright_black]│ [green]Output file: [cyan]{self._output_path.as_posix()} [bright_black]• [green]RAM buffer: [cyan]{bool_to_yes_no(enable_ram_buffer)} [bright_black]• [green]Connections: [cyan]{self._max_connections}"
                 )
 
-            # Set up progress bar and start download
+            # Setup progress bar and execute download
             with Progress(
                 *[
                     TextColumn("[bold bright_black]╰─◾"),
@@ -228,52 +257,20 @@ class TurboDL:
 
                 if enable_ram_buffer:
                     download_with_buffer(
-                        self._http_client,
-                        url,
-                        self._output_path,
-                        size,
-                        self._chunk_buffers,
-                        chunk_ranges,
-                        task_id,
-                        progress,
-                        self._logger,
+                        self._http_client, url, self._output_path, size, self._chunk_buffers, chunk_ranges, task_id, progress
                     )
                 else:
-                    download_without_buffer(
-                        self._http_client, url, self._output_path, chunk_ranges, task_id, progress, self._logger
-                    )
+                    download_without_buffer(self._http_client, url, self._output_path, chunk_ranges, task_id, progress)
         except KeyboardInterrupt as e:
-            self._logger.info("Download interrupted by user")
-
-            # Handle download interruption by user
-            self._cleanup()
-
+            self._cleanup()  # Clean up after interruption
             raise DownloadInterruptedError("Download interrupted by user") from e
         except Exception as e:
-            self._logger.error(f"Download failed. Error: {e}")
-
-            # Handle download failure
-            self._cleanup()
-
+            self._cleanup()  # Clean up after failure
             raise e
-
-        # Remove the .turbodownload suffix
-        self._output_path.rename(self._output_path.with_suffix(""))
-        self._output_path = self._output_path.with_suffix("")
-
-        self._logger.info(f"Download completed. Saved to: {self._output_path.as_posix()}")
 
         # Set the output path attribute
         self.output_path = self._output_path.as_posix()
 
-        # Check the hash of the downloaded file
+        # Verify the hash of the downloaded file, if provided
         if expected_hash is not None:
-            self._logger.info("Checking hash...")
-
             verify_hash(self._output_path, expected_hash, hash_type)
-
-            self._logger.info("Hash verification successful")
-
-        self._logger.blank_line()
-
-        return None

@@ -28,9 +28,7 @@ TEST_FILES = [
 
 
 def test_invalid_url(downloader: TurboDL, temporary_path: Path) -> None:
-    """
-    Test download with invalid URL.
-    """
+    """Test download with invalid URL."""
 
     url: str = "https://invalid-url-that-does-not-exist.com/file.zip"
 
@@ -40,9 +38,7 @@ def test_invalid_url(downloader: TurboDL, temporary_path: Path) -> None:
 
 @mark.parametrize("file_info", TEST_FILES, ids=lambda x: f"{x['name']}_with_ram")
 def test_download_file_with_ram(downloader: TurboDL, temporary_path: Path, file_info: dict) -> None:
-    """
-    Test file download with RAM buffer enabled.
-    """
+    """Test file download with RAM buffer enabled."""
 
     downloader.download(
         url=file_info["url"],
@@ -63,9 +59,7 @@ def test_download_file_with_ram(downloader: TurboDL, temporary_path: Path, file_
 
 @mark.parametrize("file_info", TEST_FILES, ids=lambda x: f"{x['name']}_without_ram")
 def test_download_file_without_ram(downloader: TurboDL, temporary_path: Path, file_info: dict) -> None:
-    """
-    Test file download with RAM buffer disabled.
-    """
+    """Test file download with RAM buffer disabled."""
 
     downloader.download(
         url=file_info["url"],

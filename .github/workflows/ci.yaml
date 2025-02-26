@@ -20,13 +20,15 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-22.04, windows-latest, macos-latest]
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ["3.10", "3.13"]
 
     steps:
       - name: 🔒 Security Scan Dependencies
         uses: step-security/harden-runner@v2
         with:
           egress-policy: audit
+          disable-sudo: ${{ matrix.os == 'ubuntu-latest' }}
 
       - name: 📥 Checkout Repository
         uses: actions/checkout@v4
@@ -36,7 +38,7 @@ jobs:
       - name: 🐍 Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.13"
+          python-version: ${{ matrix.python-version }}
           cache: pip
           check-latest: true
 
@@ -61,18 +63,16 @@ jobs:
             const success = '${{ steps.tests.outcome }}' === 'success';
             const emoji = success ? '✅' : '❌';
             const status = success ? 'passed' : 'failed';
-            const header = `### ${emoji} Test Results for ${os}\n\n`;
+            const header = `### ${emoji} Test Results for ${os} (Python ${{ matrix.python-version }})\n\n`;
             const details = [
               `**OS**: ${os}`,
-              `**Python Version**: 3.13`,
+              `**Python Version**: ${{ matrix.python-version }}`,
               `**Status**: ${status}`,
               `**Run ID**: ${process.env.GITHUB_RUN_ID}`,
               '',
               `[View Details](${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID})`
             ].join('\n');
-
             const message = header + details;
-
             await github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,

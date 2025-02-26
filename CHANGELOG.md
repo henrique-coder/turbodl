@@ -1,5 +1,32 @@
 # Changelog
 
+## [0.5.0] - (Major Improvements & New Features)
+#### Changed
+- Migrated to httpx library for improved HTTP/2 support
+- Optimized chunk size calculations for better performance
+- Enhanced error handling and recovery mechanisms
+- Improved progress bar responsiveness
+- Updated dependencies and requirements
+
+#### Added
+- Advanced retry mechanisms with exponential backoff
+- Adaptive chunk size based on connection speed
+- Enhanced error messages and debugging information
+- New connection pooling system
+
+#### Fixed
+- Memory management issues with large files
+- Progress bar flickering during high-speed downloads
+- Connection timeout handling
+- Thread synchronization issues
+- File corruption during interrupted downloads
+
+#### Removed
+- Legacy HTTP client implementation
+- Deprecated connection handling methods
+- Obsolete retry mechanisms
+- Logger functionality
+
 ## [0.3.6] - (Bug Fixes & Performance Improvements)
 #### Changed
 - Updated CLI demo gif

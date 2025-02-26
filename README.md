@@ -51,7 +51,7 @@ from turbodl import TurboDL
 
 turbodl = TurboDL(
     max_connections="auto",
-    connection_speed_mbps=80,
+    connection_speed_mbps=100,
     show_progress_bar=True,
 )
 turbodl.download(
@@ -81,7 +81,7 @@ turbodl download [...] https://example.com/file.txt path/to/file  # Download the
 
 ##### CLI Demo
 
-[![TurboDL CLI Demo](https://i.ibb.co/Nnjns2n8/demo.gif)](https://asciinema.org/a/VqOw0iHKkYunmtK8J9TPaNLOn)
+[![TurboDL CLI Demo](assets/demo.gif)](https://asciinema.org/a/hHUS4P1YwD1hdvk4BSfe444BI)
 
 ### Contributing
 

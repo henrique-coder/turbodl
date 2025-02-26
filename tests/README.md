@@ -11,7 +11,7 @@ Ensures that all TurboDL features are not broken.
 Run the tests with the following command:
 
 ```bash
-poetry run pytest -v
+poetry run pytest -v --xfail-tb
 ```
 
 Or through Makefile:

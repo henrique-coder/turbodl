@@ -3,15 +3,20 @@
 
 include = ["*.py"]
 exclude = [".idea", ".venv", "__pycache__", ".ruff_cache", ".pytest_cache"]
-target-version = "py313"
+target-version = "py310"
 line-length = 130
 indent-width = 4
+preview = true
 
 [lint]
+preview = true
 fixable = ["ALL"]
-unfixable = []
-select = ["E4", "E7", "E9", "F", "UP", "B", "SIM"]
+select = ["E4", "E7", "E9", "F", "UP", "B", "SIM", "D200", "D204", "D403", "PERF102", "PERF401", "S602"]
 dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+
+[lint.isort]
+force-single-line = false
+lines-after-imports = 2
 
 [lint.pydocstyle]
 convention = "google"
@@ -22,6 +27,6 @@ docstring-quotes = "double"
 [format]
 quote-style = "double"
 indent-style = "space"
-skip-magic-trailing-comma = true
 line-ending = "auto"
 docstring-code-format = true
+skip-magic-trailing-comma = true
