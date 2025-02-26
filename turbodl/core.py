@@ -3,7 +3,6 @@ from os import PathLike
 from pathlib import Path
 from signal import SIGINT, SIGTERM, Signals, signal
 from sys import exit
-from tempfile import gettempdir
 from types import FrameType
 from typing import Literal, NoReturn
 
@@ -17,7 +16,6 @@ from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn
 from .buffers import ChunkBuffer
 from .downloaders import download_with_buffer, download_without_buffer
 from .exceptions import DownloadInterruptedError, InvalidArgumentError, NotEnoughSpaceError
-from .loggers import LogToFile
 from .utils import (
     CustomDownloadColumn,
     CustomSpeedColumn,
@@ -63,7 +61,6 @@ class TurboDL:
         self._connection_speed_mbps: float = connection_speed_mbps
         self._show_progress_bar: bool = show_progress_bar
         self._output_path: Path | None = None
-        self._logger: LogToFile = LogToFile(log_file_path=Path(gettempdir(), "turbodl.log"), overwrite=False)
         self._console: Console = Console()
         self._http_client: Client = Client(
             follow_redirects=True,
@@ -136,53 +133,38 @@ class TurboDL:
             DownloadInterruptedError: If the download is interrupted by the user.
         """
 
-        self._logger.info(f"Starting download of {url}")
-
         # Validate and set headers and timeout
         self._http_client.headers.update(validate_headers(headers))
         self._http_client.timeout = timeout
 
         # Set and resolve the output path
         self._output_path = Path.cwd() if output_path is None else Path(output_path).resolve()
-        self._logger.debug(f"Output path: {self._output_path}")
 
         # Determine if output path is a RAM directory and set RAM buffer flag
         is_ram_dir = is_ram_directory(self._output_path)
-        self._logger.debug(f"Is RAM directory: {is_ram_dir} ({bool_to_yes_no(is_ram_dir)})")
 
         if enable_ram_buffer == "auto":
             enable_ram_buffer = not is_ram_dir
-        self._logger.debug(f"Enable RAM buffer: {enable_ram_buffer} ({bool_to_yes_no(enable_ram_buffer)})")
 
         # Fetch file information from the server
         try:
             remote_file_info = fetch_file_info(self._http_client, url)
         except Exception as e:
-            self._logger.error(f"Failed to fetch file info. Error: {e}")
             raise e
 
         # Extract and log file details
         url: str = remote_file_info.url
         filename: str = remote_file_info.filename
-        mimetype: str = remote_file_info.mimetype
         size: int = remote_file_info.size
-
-        self._logger.debug(f"URL: {url}")
-        self._logger.debug(f"Filename: {filename}")
-        self._logger.debug(f"Mimetype: {mimetype}")
-        self._logger.debug(f"Size: {size} ({format_size(size)})")
 
         # Calculate optimal connections and chunk ranges
         if self._max_connections == "auto":
             self._max_connections = calculate_max_connections(size, self._connection_speed_mbps)
-        self._logger.debug(f"Max connections: {self._max_connections}")
 
         chunk_ranges = generate_chunk_ranges(size, self._max_connections)
-        self._logger.debug(f"Chunk ranges: {chunk_ranges} ({len(chunk_ranges)} chunk(s))")
 
         # Check for available disk space
         if not has_available_space(self._output_path, size):
-            self._logger.error(f"Not enough space to download {filename}")
             raise NotEnoughSpaceError(f"Not enough space to download {filename}")
 
         # Append filename if output path is a directory
@@ -202,7 +184,6 @@ class TurboDL:
         try:
             # Pre-allocate space if required
             if pre_allocate_space:
-                self._logger.info(f"Pre-allocating space for {size} bytes...")
                 with Progress(
                     SpinnerColumn(spinner_name="dots", style="bold cyan"),
                     TextColumn(f"[bold cyan]Pre-allocating space for {size} bytes...", justify="left"),
@@ -214,8 +195,6 @@ class TurboDL:
                         fo.truncate(size)
             else:
                 self._output_path.touch(exist_ok=True)
-
-            self._logger.info(f"Output file (in progress): {self._output_path.as_posix()}")
 
             # Display progress bar header
             if self._show_progress_bar:
@@ -250,38 +229,20 @@ class TurboDL:
 
                 if enable_ram_buffer:
                     download_with_buffer(
-                        self._http_client,
-                        url,
-                        self._output_path,
-                        size,
-                        self._chunk_buffers,
-                        chunk_ranges,
-                        task_id,
-                        progress,
-                        self._logger,
+                        self._http_client, url, self._output_path, size, self._chunk_buffers, chunk_ranges, task_id, progress
                     )
                 else:
-                    download_without_buffer(
-                        self._http_client, url, self._output_path, chunk_ranges, task_id, progress, self._logger
-                    )
+                    download_without_buffer(self._http_client, url, self._output_path, chunk_ranges, task_id, progress)
         except KeyboardInterrupt as e:
-            self._logger.info("Download interrupted by user")
             self._cleanup()  # Clean up after interruption
             raise DownloadInterruptedError("Download interrupted by user") from e
         except Exception as e:
-            self._logger.error(f"Download failed. Error: {e}")
             self._cleanup()  # Clean up after failure
             raise e
-
-        self._logger.info(f"Download completed. Saved to: {self._output_path.as_posix()}")
 
         # Set the output path attribute
         self.output_path = self._output_path.as_posix()
 
         # Verify the hash of the downloaded file, if provided
         if expected_hash is not None:
-            self._logger.info("Checking hash...")
             verify_hash(self._output_path, expected_hash, hash_type)
-            self._logger.info("Hash verification successful")
-
-        self._logger.blank_line()

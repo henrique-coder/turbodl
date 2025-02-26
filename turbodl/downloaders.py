@@ -12,7 +12,6 @@ from rich.progress import Progress, TaskID
 
 # Local imports
 from .buffers import ChunkBuffer
-from .loggers import LogToFile
 from .utils import download_retry_decorator
 
 
@@ -41,10 +40,7 @@ def download_with_buffer_worker(
     chunk_id: int,
     task_id: int,
     progress: Progress,
-    logger: LogToFile,
 ) -> None:
-    logger.info(f"Starting thread for chunk {chunk_id + 1}")
-
     chunk_buffers[chunk_id] = ChunkBuffer()
 
     if end > 0:
@@ -63,8 +59,6 @@ def download_with_buffer_worker(
         if remaining := chunk_buffers[chunk_id].current_buffer.getvalue():
             download_with_buffer_writer(output_path, size_bytes, start + write_positions[chunk_id], remaining)
 
-        logger.debug(f"Finished thread for chunk {chunk_id + 1}")
-
 
 def download_with_buffer(
     http_client: Client,
@@ -75,11 +69,8 @@ def download_with_buffer(
     chunk_ranges: Sequence[tuple[int, int]],
     task_id: int,
     progress: Progress,
-    logger: LogToFile,
 ) -> None:
     write_positions = [0] * len(chunk_ranges)
-
-    logger.info("Starting download with RAM buffer")
 
     with ThreadPoolExecutor(max_workers=len(chunk_ranges)) as executor:
         for future in [
@@ -96,7 +87,6 @@ def download_with_buffer(
                 i,
                 task_id,
                 progress,
-                logger,
             )
             for i, (start, end) in enumerate(chunk_ranges)
         ]:
@@ -133,10 +123,7 @@ def download_without_buffer(
     chunk_ranges: Sequence[tuple[int, int]],
     task_id: int,
     progress: Progress,
-    logger: LogToFile,
 ) -> None:
-    logger.info("Starting download without RAM buffer")
-
     with ThreadPoolExecutor(max_workers=len(chunk_ranges)) as executor:
         futures = [
             executor.submit(download_without_buffer_worker, http_client, url, output_path, start, end, task_id, progress)
@@ -147,8 +134,4 @@ def download_without_buffer(
             try:
                 future.result()
             except Exception as e:
-                logger.error(f"Download failed: {e}")
-
                 raise e
-
-    logger.info("Completed download without buffer")
