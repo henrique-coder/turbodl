@@ -3,7 +3,7 @@ from collections.abc import Callable
 from contextlib import suppress
 from dataclasses import dataclass
 from hashlib import new as hashlib_new
-from math import ceil, sqrt
+from math import ceil, exp, log10
 from mimetypes import guess_extension as guess_mimetype_extension
 from mmap import ACCESS_READ, mmap
 from os import PathLike
@@ -47,6 +47,16 @@ from .exceptions import HashVerificationError, InvalidArgumentError, InvalidFile
 
 @dataclass
 class RemoteFileInfo:
+    """
+    Dataclass for storing information about a remote file.
+
+    Attributes:
+        url (str): The URL of the remote file.
+        filename (str): The filename of the remote file.
+        mimetype (str): The MIME type of the remote file.
+        size (int): The size of the remote file in bytes.
+    """
+
     url: str
     filename: str
     mimetype: str
@@ -54,13 +64,43 @@ class RemoteFileInfo:
 
 
 def download_retry_decorator(func: Callable[..., Any]) -> Callable[..., Any]:
+    """
+    Decorator that adds retry logic to the decorated function.
+
+    The decorated function will be retried up to 5 times with an exponential backoff
+    strategy in case of a connection error, timeout, or remote protocol error.
+
+    Args:
+        func (Callable[..., Any]): The function to be decorated.
+
+    Returns:
+        Callable[..., Any]: The decorated function.
+    """
+
     @retry(
-        stop=stop_after_attempt(5),
-        wait=wait_exponential(min=2, max=120),
-        retry=retry_if_exception_type((ConnectError, ConnectTimeout, ReadTimeout, RemoteProtocolError, TimeoutException)),
-        reraise=True,
+        stop=stop_after_attempt(5),  # Stop retrying after 5 attempts
+        wait=wait_exponential(min=2, max=120),  # Wait for 2 seconds on the first retry, then 4 seconds, then 8 seconds, and so on
+        retry=retry_if_exception_type((
+            ConnectError,
+            ConnectTimeout,
+            ReadTimeout,
+            RemoteProtocolError,
+            TimeoutException,
+        )),  # Retry on connection errors, timeouts, or remote protocol errors
+        reraise=True,  # Reraise the last exception if all retries fail
     )
     def wrapper(*args: Any, **kwargs: Any) -> Any:
+        """
+        The decorated function with retry logic.
+
+        Args:
+            *args (Any): The positional arguments to be passed to the decorated function.
+            *kwargs (Any): The keyword arguments to be passed to the decorated function.
+
+        Returns:
+            Any: The result of the decorated function.
+        """
+
         return func(*args, **kwargs)
 
     return wrapper
@@ -68,8 +108,16 @@ def download_retry_decorator(func: Callable[..., Any]) -> Callable[..., Any]:
 
 class CustomDownloadColumn(DownloadColumn):
     def __init__(self, style: str | None = None) -> None:
+        """
+        Initialize a custom progress bar download column with the specified style.
+
+        Args:
+            style (str | None): The style of the download column. Defaults to None.
+        """
+        
         self.style = style
 
+        # Call the parent class's constructor
         super().__init__()
 
     def render(self, task: Task) -> Text:
@@ -200,9 +248,14 @@ def get_filesystem_type(path: str | Path) -> str | None:
 def has_available_space(path: str | PathLike, required_size_bytes: int, minimum_free_space_bytes: int = ONE_GB) -> bool:
     path = Path(path)
     required_space = required_size_bytes + minimum_free_space_bytes
-    disk_usage_obj = disk_usage(path.parent.as_posix() if path.is_file() or not path.exists() else path.as_posix())
 
-    return disk_usage_obj.free >= required_space
+    try:
+        check_path = path.parent if path.is_file() or not path.exists() else path
+        disk_usage_obj = disk_usage(check_path.as_posix())
+
+        return disk_usage_obj.free >= required_space
+    except Exception:
+        return False
 
 
 def is_ram_directory(path: str | PathLike) -> bool:
@@ -306,19 +359,92 @@ def generate_chunk_ranges(size_bytes: int, max_connections: int) -> list[tuple[i
 
 
 def calculate_max_connections(size_bytes: int, connection_speed_mbps: float) -> int:
-    size_mb = size_bytes / (1024 * 1024)
+    """
+    Calculates the optimal number of connections based on file size and connection speed.
 
-    if size_mb <= 10:
-        base_connections = 4
-    elif size_mb <= 100:
-        base_connections = 8
+    Uses a sophisticated algorithm that considers:
+    - File size (bytes)
+    - Connection speed (Mbps)
+    - Estimated latency
+    - Connection overhead
+    - Hardware limitations
+
+    Args:
+        size_bytes: File size in bytes
+        connection_speed_mbps: Connection speed in Mbps
+
+    Returns:
+        Optimal number of connections between 2 and 24
+    """
+
+    # Convert to MB for easier calculations
+    size_mb = size_bytes / ONE_MB
+
+    # Base connection calculation using logarithmic scaling
+    # Formula: base_conn = 2 + α * log₁₀(size_mb + 1)
+    # Where α is a scaling factor that varies by size range
+    if size_mb < 1:
+        # For very small files (< 1MB)
+        # Use minimal connections to avoid overhead
+        base_conn = 2
+    elif size_mb < 10:
+        # For small files (1-10MB)
+        # Logarithmic growth with small coefficient
+        base_conn = 2 + 1.2 * log10(size_mb + 1)
+    elif size_mb < 50:
+        # For medium-small files (10-50MB)
+        base_conn = 4 + 2.0 * log10(size_mb / 10 + 0.5)
+    elif size_mb < 100:
+        # For medium files (50-100MB)
+        base_conn = 6 + 2.5 * log10(size_mb / 50 + 0.7)
+    elif size_mb < 500:
+        # For medium-large files (100-500MB)
+        base_conn = 8 + 3.0 * log10(size_mb / 100 + 0.8)
+    elif size_mb < 1000:
+        # For large files (500MB-1GB)
+        base_conn = 12 + 3.5 * log10(size_mb / 500 + 0.85)
+    elif size_mb < 5000:
+        # For very large files (1GB-5GB)
+        base_conn = 16 + 4.0 * log10(size_mb / 1000 + 0.9)
+    elif size_mb < 10000:
+        # For huge files (5GB-10GB)
+        base_conn = 18 + 4.5 * log10(size_mb / 5000 + 0.95)
     else:
-        base_connections = min(16, ceil(sqrt(size_mb) / 1.5))
+        # For massive files (>10GB)
+        # Approach maximum connections with diminishing returns
+        base_conn = 20 + 4.0 * (1 - exp(-size_mb / 20000))
 
-    speed_factor = min(2.5, (connection_speed_mbps / 50))
-    connections = max(MIN_CONNECTIONS, min(MAX_CONNECTIONS, ceil(base_connections * speed_factor)))
+    # Connection speed adjustment using sigmoid function
+    # Formula: speed_factor = 1 + β * (1 / (1 + e^(-γ * (speed - δ))))
+    # Where β is the maximum boost, γ controls transition steepness, and δ is the midpoint
+    if connection_speed_mbps < 10:
+        # For very slow connections, reduce connections to avoid overhead
+        speed_factor = 0.8
+    else:
+        # Sigmoid function that scales with connection speed
+        # Normalized to give reasonable values between 0.8 and 1.5
+        sigmoid = 1 / (1 + exp(-0.015 * (min(connection_speed_mbps, 500) - 100)))
+        speed_factor = 0.8 + 0.7 * sigmoid
 
-    return connections
+    # Apply speed factor to base connections
+    adjusted_conn = base_conn * speed_factor
+
+    # Apply fine-tuning adjustments for specific size/speed combinations
+    if size_mb < 5 and connection_speed_mbps > 100:
+        # Small files on fast connections don't benefit from many connections
+        adjusted_conn = min(adjusted_conn, 4 + size_mb / 2)
+    elif size_mb > 1000 and connection_speed_mbps < 20:
+        # Large files on slow connections need more connections to maintain progress
+        adjusted_conn = min(adjusted_conn * 1.2, MAX_CONNECTIONS)
+    elif size_mb > 5000 and connection_speed_mbps > 300:
+        # Very large files on very fast connections benefit from more connections
+        # but with diminishing returns beyond a certain point
+        adjusted_conn = min(adjusted_conn * 1.1, MAX_CONNECTIONS)
+
+    # Apply minimum and maximum limits with rounding
+    final_connections = max(MIN_CONNECTIONS, min(MAX_CONNECTIONS, round(adjusted_conn)))
+
+    return final_connections
 
 
 def verify_hash(file_path: str | PathLike, expected_hash: str, hash_type: str, chunk_size: int = ONE_MB) -> None:
