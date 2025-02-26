@@ -11,7 +11,7 @@ from .constants import CHUNK_SIZE, MAX_BUFFER_SIZE, MAX_RAM_USAGE
 class ChunkBuffer:
     def __init__(self, chunk_size_bytes: int = CHUNK_SIZE, max_buffer_size_bytes: int = MAX_BUFFER_SIZE) -> None:
         self.chunk_size = chunk_size_bytes
-        self.max_buffer_size = min(max_buffer_size_bytes, virtual_memory().available * MAX_RAM_USAGE)
+        self.max_buffer_size = min(max_buffer_size_bytes, int(virtual_memory().available * MAX_RAM_USAGE))
         self.current_buffer = BytesIO()
         self.current_size = 0
         self.total_buffered = 0
@@ -19,7 +19,7 @@ class ChunkBuffer:
     def write(self, data: bytes, total_file_size_bytes: int) -> bytes | None:
         data_size = len(data)
 
-        if self.current_size + data_size > self.max_buffer_size or self.total_buffered + data_size > self.max_buffer_size:
+        if self.current_size + data_size > self.max_buffer_size:
             return None
 
         if self.total_buffered + data_size > total_file_size_bytes:
@@ -43,3 +43,7 @@ class ChunkBuffer:
             return chunk_data
 
         return None
+
+    def __del__(self) -> None:
+        if hasattr(self, "current_buffer"):
+            self.current_buffer.close()
