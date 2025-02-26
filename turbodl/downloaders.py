@@ -41,23 +41,30 @@ def download_with_buffer_worker(
     task_id: int,
     progress: Progress,
 ) -> None:
-    chunk_buffers[chunk_id] = ChunkBuffer()
+    try:
+        chunk_buffers[chunk_id] = ChunkBuffer()
 
-    if end > 0:
-        http_client.headers["Range"] = f"bytes={start}-{end}"
+        if end > 0:
+            http_client.headers["Range"] = f"bytes={start}-{end}"
 
-    with http_client.stream("GET", url) as r:
-        r.raise_for_status()
+        with http_client.stream("GET", url) as r:
+            r.raise_for_status()
 
-        for data in r.iter_bytes(chunk_size=1024 * 1024):
-            if complete_chunk := chunk_buffers[chunk_id].write(data, size_bytes):
-                download_with_buffer_writer(output_path, size_bytes, start + write_positions[chunk_id], complete_chunk)
-                write_positions[chunk_id] += len(complete_chunk)
+            for data in r.iter_bytes(chunk_size=1024 * 1024):
+                if not data:
+                    break
 
-            progress.update(TaskID(task_id), advance=len(data))
+                if complete_chunk := chunk_buffers[chunk_id].write(data, size_bytes):
+                    download_with_buffer_writer(output_path, size_bytes, start + write_positions[chunk_id], complete_chunk)
+                    write_positions[chunk_id] += len(complete_chunk)
+
+                progress.update(TaskID(task_id), advance=len(data))
 
         if remaining := chunk_buffers[chunk_id].current_buffer.getvalue():
             download_with_buffer_writer(output_path, size_bytes, start + write_positions[chunk_id], remaining)
+    finally:
+        if chunk_id in chunk_buffers and hasattr(chunk_buffers[chunk_id], "current_buffer"):
+            chunk_buffers[chunk_id].current_buffer.close()
 
 
 def download_with_buffer(
