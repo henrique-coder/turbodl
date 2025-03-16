@@ -15,7 +15,7 @@ from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn
 # Local imports
 from .buffers import ChunkBuffer
 from .downloaders import download_with_buffer, download_without_buffer
-from .exceptions import DownloadInterruptedError, InvalidArgumentError, NotEnoughSpaceError
+from .exceptions import DownloadInterruptedError, InvalidArgumentError, NotEnoughSpaceError, UnidentifiedFileSizeError
 from .utils import (
     CustomDownloadColumn,
     CustomSpeedColumn,
@@ -65,6 +65,7 @@ class TurboDL:
         self._http_client: Client = Client(
             follow_redirects=True,
             limits=Limits(max_connections=32, max_keepalive_connections=32, keepalive_expiry=30),
+            verify=False,
             timeout=None,
         )
         self._chunk_buffers: dict[str, ChunkBuffer] = {}
@@ -175,15 +176,17 @@ class TurboDL:
             enable_ram_buffer = not is_ram_dir
 
         # Fetch file information from the server
-        try:
-            remote_file_info = fetch_file_info(self._http_client, url)
-        except Exception as e:
-            raise e
+        remote_file_info = fetch_file_info(self._http_client, url)
 
         # Extract and log file details
         url: str = remote_file_info.url
         filename: str = remote_file_info.filename
-        size: int = remote_file_info.size
+        size: int | Literal["unknown"] = remote_file_info.size
+
+        if size == "unknown":
+            raise UnidentifiedFileSizeError(
+                "Unable to detect file size. Support for files without a fixed size is under development."
+            )
 
         # Calculate optimal connections and chunk ranges
         if self._max_connections == "auto":
