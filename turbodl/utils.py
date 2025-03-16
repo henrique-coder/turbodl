@@ -42,7 +42,7 @@ from .constants import (
     REQUIRED_HEADERS,
     YES_NO_VALUES,
 )
-from .exceptions import HashVerificationError, InvalidArgumentError, InvalidFileSizeError, RemoteFileError
+from .exceptions import HashVerificationError, InvalidArgumentError, RemoteFileError
 
 
 @dataclass
@@ -54,13 +54,13 @@ class RemoteFileInfo:
         url (str): The URL of the remote file.
         filename (str): The filename of the remote file.
         mimetype (str): The MIME type of the remote file.
-        size (int): The size of the remote file in bytes.
+        size (int | Literal["unknown"]): The size of the remote file in bytes.
     """
 
     url: str
     filename: str
     mimetype: str
-    size: int
+    size: int | Literal["unknown"]
 
 
 def download_retry_decorator(func: Callable[..., Any]) -> Callable[..., Any]:
@@ -424,8 +424,8 @@ def fetch_file_info(http_client: Client, url: str) -> RemoteFileInfo:
         RemoteFileInfo: The file information of the given URL.
     """
 
-    if not url or not isinstance(url, str):
-        raise InvalidArgumentError("URL must be a non-empty string")
+    if not url:
+        raise InvalidArgumentError("URL cannot be empty")
 
     r = None
     r_headers = None
@@ -435,6 +435,8 @@ def fetch_file_info(http_client: Client, url: str) -> RemoteFileInfo:
         r = http_client.head(url)
         r.raise_for_status()
         r_headers = r.headers
+    # except ConnectError:
+    #     # If the connection fails, try to fetch the file information disabling verification of the SSL certificate
     except RemoteProtocolError:
         # If the server does not support HEAD requests, use a GET request with a range
         r = http_client.get(url, headers={"Range": "bytes=0-0"})
@@ -458,8 +460,9 @@ def fetch_file_info(http_client: Client, url: str) -> RemoteFileInfo:
         with suppress(ValueError):
             size = int(content_length)
 
+    # If size is still None or invalid, set it to "unknown" instead of raising an error
     if not size or size <= 0:
-        raise InvalidFileSizeError(f"Invalid file size: {size}")
+        size = "unknown"
 
     content_type = r_headers.get("content-type", "application/octet-stream").split(";")[0].strip()
 
