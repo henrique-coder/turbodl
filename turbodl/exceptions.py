@@ -44,3 +44,9 @@ class RemoteFileError(TurboDLError):
     """Exception raised when there is a problem with the remote file."""
 
     pass
+
+
+class UnidentifiedFileSizeError(TurboDLError):
+    """Exception raised when the file size cannot be identified."""
+
+    pass
