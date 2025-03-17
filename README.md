@@ -8,7 +8,7 @@
 
 ## 🚀 Overview
 
-TurboDL is an extremely smart, fast, and efficient download manager designed to optimize your downloading experience with advanced acceleration techniques and intelligent resource management.
+TurboDL is an extremely smart, fast, and efficient download manager designed to optimize your downloading experience.
 
 ## ✨ Key Features
 
@@ -72,7 +72,7 @@ turbodl.download(
 print(turbodl.output_path)
 ```
 
-### Command Line Interface
+## Command Line Interface
 
 ```bash
 # Show help for all commands
@@ -146,8 +146,6 @@ Contributions are what make the open source community such an amazing place to l
 5. Open a Pull Request
 
 ## 👥 Contributors
-
-<br>
 
 <a href="https://github.com/henrique-coder/turbodl/graphs/contributors">
   <img src="https://contrib.rocks/image?repo=henrique-coder/turbodl" />
