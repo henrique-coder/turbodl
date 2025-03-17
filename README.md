@@ -62,7 +62,8 @@ turbodl.download(
     use_ram_buffer="auto",
     overwrite=True,
     headers=None,
-    timeout=None
+    inactivity_timeout=120,
+    timeout=None,
     expected_hash=None,
     hash_type="md5",
 )
