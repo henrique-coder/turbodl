@@ -7,7 +7,7 @@ from types import FrameType
 from typing import Literal, NoReturn
 
 # Third-party modules
-from httpx import Client, Limits
+from httpx import Client, Limits, Timeout
 from humanfriendly import format_size
 from rich.console import Console
 from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn
@@ -64,9 +64,8 @@ class TurboDL:
         self._console: Console = Console()
         self._http_client: Client = Client(
             follow_redirects=True,
-            limits=Limits(max_connections=32, max_keepalive_connections=32, keepalive_expiry=30),
+            limits=Limits(max_connections=32, max_keepalive_connections=32, keepalive_expiry=60),
             verify=False,
-            timeout=None,
         )
         self._chunk_buffers: dict[str, ChunkBuffer] = {}
 
@@ -74,11 +73,7 @@ class TurboDL:
         self.output_path: str | None = None
 
     def _setup_signal_handlers(self) -> None:
-        """
-        Setup signal handlers for clean exit on SIGINT (Ctrl+C) and SIGTERM.
-
-        This is useful for cleaning up temporary files and closing the HTTP client.
-        """
+        """Setup signal handlers for clean exit on SIGINT (Ctrl+C) and SIGTERM. This is useful for cleaning up temporary files and closing the HTTP client."""
 
         # Setup signal handlers for clean exit
         for sig in (SIGINT, SIGTERM):
@@ -125,6 +120,7 @@ class TurboDL:
         enable_ram_buffer: bool | Literal["auto"] = "auto",
         overwrite: bool = True,
         headers: dict[str, str] | None = None,
+        inactivity_timeout: int | None = 120,
         timeout: int | None = None,
         expected_hash: str | None = None,
         hash_type: Literal[
@@ -153,7 +149,8 @@ class TurboDL:
             enable_ram_buffer (bool | Literal["auto"]): Use RAM buffer for download. If set to False, the file will be downloaded continuously to disk. If set to True, the file will be downloaded with the help of RAM memory. If set to "auto", the RAM buffer will be disabled if the output path is a RAM directory and enabled otherwise. Defaults to "auto".
             overwrite (bool): Overwrite existing file if true. Defaults to True.
             headers (dict[str, str] | None): Additional headers for the request. Defaults to None.
-            timeout (int | None): Timeout for the download request. Defaults to None.
+            inactivity_timeout (int | None): Timeout in seconds after no data is received. None means no timeout. Defaults to 120.
+            timeout (int | None): Total timeout for the download request. Defaults to None.
             expected_hash (str | None): Expected hash for file verification. Defaults to None.
             hash_type (Literal): Hash algorithm to use for verification. Available: md5, sha1, sha224, sha256, sha384, sha512, blake2b, blake2s, sha3_224, sha3_256, sha3_384, sha3_512, shake_128, shake_256. Defaults to "md5".
 
@@ -164,7 +161,14 @@ class TurboDL:
 
         # Validate and set headers and timeout
         self._http_client.headers.update(validate_headers(headers))
-        self._http_client.timeout = timeout
+
+        # Configure timeout settings
+        custom_timeout = None
+
+        if timeout is not None or inactivity_timeout is not None:
+            custom_timeout = Timeout(connect=30, read=inactivity_timeout, write=inactivity_timeout, pool=timeout)
+
+        self._http_client.timeout = custom_timeout
 
         # Set and resolve the output path
         self._output_path = Path.cwd() if output_path is None else Path(output_path).resolve()
@@ -222,8 +226,9 @@ class TurboDL:
                     disable=not self._show_progress_bar,
                 ) as progress:
                     progress.add_task("", total=None)
-                    with self._output_path.open("wb") as fo:
-                        fo.truncate(size)
+
+                with self._output_path.open("wb") as fo:
+                    fo.truncate(size)
             else:
                 self._output_path.touch(exist_ok=True)
 
