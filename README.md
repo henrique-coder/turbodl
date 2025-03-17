@@ -2,7 +2,6 @@
 
 ![PyPI - Version](https://img.shields.io/pypi/v/turbodl?style=for-the-badge&logo=pypi&logoColor=white&color=blue)
 ![PyPI - Downloads](https://img.shields.io/pypi/dm/turbodl?style=for-the-badge&logo=pypi&logoColor=white&color=blue)
-![Code Style](https://img.shields.io/badge/code%20style-ruff-blue?style=for-the-badge&logo=ruff&logoColor=white)
 ![Python Versions](https://img.shields.io/pypi/pyversions/turbodl?style=for-the-badge&logo=python&logoColor=white&color=blue)
 ![License](https://img.shields.io/github/license/henrique-coder/turbodl?style=for-the-badge&color=blue)
 
