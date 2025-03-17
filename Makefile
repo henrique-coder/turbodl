@@ -1,18 +1,8 @@
 PYTHON ?= python3
 VENV := .venv
 
-.PHONY: setup-venv tests lint format install clean check help
+.PHONY: setup-venv install lint format tests demo help
 .DEFAULT_GOAL := help
-
-help:
-	@echo "Available commands:"
-	@echo "  setup-venv  - Create a virtual environment"
-	@echo "  update      - Update dependencies, poetry.lock file, and install project"
-	@echo "  lint        - Check code with ruff"
-	@echo "  format      - Format code with ruff"
-	@echo "  tests       - Run tests with pytest"
-	@echo "  demo        - Generate a gif demonstrating the TurboDL CLI functionality and upload it to asciinema"
-	@echo "  help        - Show this help message"
 
 setup-venv:
 	@echo "Creating virtual environment..."
@@ -22,7 +12,7 @@ setup-venv:
 	@touch $(VENV)
 	@echo "Virtual environment created at $(VENV) with Poetry installed"
 
-update:
+install:
 	poetry update
 	poetry install
 
@@ -40,3 +30,13 @@ demo:
 	agg "demo.cast" "assets/demo.gif"
 	@echo -n "Do you want to upload the recording to asciinema (y/N): "
 	@read answer; if [ "$$answer" = "y" ] || [ "$$answer" = "Y" ]; then asciinema upload "demo.cast"; fi
+
+help:
+	@echo "Available commands:"
+	@echo "  setup-venv  - Create a virtual environment"
+	@echo "  install     - Update dependencies, poetry.lock file, and install project"
+	@echo "  lint        - Check code with ruff"
+	@echo "  format      - Format code with ruff"
+	@echo "  tests       - Run tests with pytest"
+	@echo "  demo        - Generate a gif demonstrating the TurboDL CLI functionality and upload it to asciinema"
+	@echo "  help        - Show this help message"

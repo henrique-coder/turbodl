@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.5.1] - (Performance Enhancements & Stability Improvements)
+#### Changed
+- Streamlined HTTP client initialization and enhanced file info fetching logic
+- Improved code readability by adjusting indentation in download_with_buffer_worker
+- Updated RemoteFileInfo size type to allow "unknown" and improved URL validation
+- Simplified Makefile commands and updated help text
+- Updated project description to emphasize optimization features
+
+#### Added
+- Inactivity timeout configuration for HTTP client and improved timeout handling
+- Updated default HTTP headers for enhanced content negotiation and security
+- Reset_buffer method to ChunkBuffer for better memory management
+- UnidentifiedFileSizeError exception for handling unknown file sizes
+
+#### Fixed
+- Reduced maximum RAM usage constant from 30% to 20% for better system compatibility
+
+#### Dependencies
+- Updated ruff to version 0.11.0
+- Updated pytest to version 8.3.5
+- Updated typer to version 0.15.2
+
 ## [0.5.0] - (Major Improvements & New Features)
 #### Changed
 - Migrated to httpx library for improved HTTP/2 support

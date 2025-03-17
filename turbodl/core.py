@@ -7,7 +7,7 @@ from types import FrameType
 from typing import Literal, NoReturn
 
 # Third-party modules
-from httpx import Client, Limits
+from httpx import Client
 from humanfriendly import format_size
 from rich.console import Console
 from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn
@@ -15,7 +15,7 @@ from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn
 # Local imports
 from .buffers import ChunkBuffer
 from .downloaders import download_with_buffer, download_without_buffer
-from .exceptions import DownloadInterruptedError, InvalidArgumentError, NotEnoughSpaceError
+from .exceptions import DownloadInterruptedError, InvalidArgumentError, NotEnoughSpaceError, UnidentifiedFileSizeError
 from .utils import (
     CustomDownloadColumn,
     CustomSpeedColumn,
@@ -27,7 +27,6 @@ from .utils import (
     has_available_space,
     is_ram_directory,
     truncate_url,
-    validate_headers,
     verify_hash,
 )
 
@@ -40,9 +39,9 @@ class TurboDL:
         Initialize a TurboDL instance with specified settings.
 
         Args:
-            max_connections (int | Literal['auto']): Maximum connections for downloading. Maximum value is 32. Defaults to 'auto'.
-            connection_speed_mbps (float): Connection speed in Mbps for optimal performance. Defaults to 100.
-            show_progress_bar (bool): Flag to display the progress bar. Defaults to True.
+            max_connections (int | Literal['auto']): Maximum connections for parallel downloading. Minimum is 1 and maximum is 32. Defaults to 'auto'.
+            connection_speed_mbps (float): Your current internet connection speed in Mbps. Defaults to 100.
+            show_progress_bar (bool): Whether to display a progress bar. Defaults to True.
         """
 
         # Setup signal handlers for clean exit
@@ -62,22 +61,14 @@ class TurboDL:
         self._show_progress_bar: bool = show_progress_bar
         self._output_path: Path | None = None
         self._console: Console = Console()
-        self._http_client: Client = Client(
-            follow_redirects=True,
-            limits=Limits(max_connections=32, max_keepalive_connections=32, keepalive_expiry=30),
-            timeout=None,
-        )
+        self._http_client: Client | None = None
         self._chunk_buffers: dict[str, ChunkBuffer] = {}
 
         # Initialize public attributes
         self.output_path: str | None = None
 
     def _setup_signal_handlers(self) -> None:
-        """
-        Setup signal handlers for clean exit on SIGINT (Ctrl+C) and SIGTERM.
-
-        This is useful for cleaning up temporary files and closing the HTTP client.
-        """
+        """Setup signal handlers for clean exit on SIGINT (Ctrl+C) and SIGTERM. This is useful for cleaning up temporary files and closing the HTTP client."""
 
         # Setup signal handlers for clean exit
         for sig in (SIGINT, SIGTERM):
@@ -124,6 +115,7 @@ class TurboDL:
         enable_ram_buffer: bool | Literal["auto"] = "auto",
         overwrite: bool = True,
         headers: dict[str, str] | None = None,
+        inactivity_timeout: int | None = 120,
         timeout: int | None = None,
         expected_hash: str | None = None,
         hash_type: Literal[
@@ -150,20 +142,17 @@ class TurboDL:
             output_path (str | PathLike | None): The path to save the downloaded file. If it is a directory, filename is derived from server response. If None, the current working directory is used. Defaults to None.
             pre_allocate_space (bool): Whether to pre-allocate disk space for the file. Defaults to False.
             enable_ram_buffer (bool | Literal["auto"]): Use RAM buffer for download. If set to False, the file will be downloaded continuously to disk. If set to True, the file will be downloaded with the help of RAM memory. If set to "auto", the RAM buffer will be disabled if the output path is a RAM directory and enabled otherwise. Defaults to "auto".
-            overwrite (bool): Overwrite existing file if true. Defaults to True.
-            headers (dict[str, str] | None): Additional headers for the request. Defaults to None.
-            timeout (int | None): Timeout for the download request. Defaults to None.
-            expected_hash (str | None): Expected hash for file verification. Defaults to None.
-            hash_type (Literal): Hash algorithm to use for verification. Available: md5, sha1, sha224, sha256, sha384, sha512, blake2b, blake2s, sha3_224, sha3_256, sha3_384, sha3_512, shake_128, shake_256. Defaults to "md5".
+            overwrite (bool): Whether to overwrite the file if it already exists. Defaults to True.
+            headers (dict[str, str] | None): A dictionary of headers to include in the request. Defaults to None.
+            inactivity_timeout (int | None): Timeout in seconds after the connection is considered idle. None means no timeout. Defaults to 120.
+            timeout (int | None): Overall timeout in seconds. None means no timeout. Defaults to None.
+            expected_hash (str | None): The expected hash value of the downloaded file. If provided, the file will be verified after download. Defaults to None.
+            hash_type (Literal["md5", "sha1", "sha224", "sha256", "sha384", "sha512", "blake2b", "blake2s", "sha3_224", "sha3_256", "sha3_384", "sha3_512", "shake_128", "shake_256"]): Hash algorithm to use for verification. Available: md5, sha1, sha224, sha256, sha384, sha512, blake2b, blake2s, sha3_224, sha3_256, sha3_384, sha3_512, shake_128, shake_256. Defaults to "md5".
 
         Raises:
             NotEnoughSpaceError: If there's not enough space to download the file.
             DownloadInterruptedError: If the download is interrupted by the user.
         """
-
-        # Validate and set headers and timeout
-        self._http_client.headers.update(validate_headers(headers))
-        self._http_client.timeout = timeout
 
         # Set and resolve the output path
         self._output_path = Path.cwd() if output_path is None else Path(output_path).resolve()
@@ -175,15 +164,21 @@ class TurboDL:
             enable_ram_buffer = not is_ram_dir
 
         # Fetch file information from the server
-        try:
-            remote_file_info = fetch_file_info(self._http_client, url)
-        except Exception as e:
-            raise e
+        generated_data = fetch_file_info(url, headers, inactivity_timeout, timeout)
 
-        # Extract and log file details
-        url: str = remote_file_info.url
-        filename: str = remote_file_info.filename
-        size: int = remote_file_info.size
+        # Extract file information
+        file_info = generated_data[0]
+        url: str = file_info.url
+        filename: str = file_info.filename
+        size: int | Literal["unknown"] = file_info.size
+
+        # Initialize HTTP client
+        self._http_client = generated_data[1]
+
+        if size == "unknown":
+            raise UnidentifiedFileSizeError(
+                "Unable to detect file size. Support for files without a fixed size is under development."
+            )
 
         # Calculate optimal connections and chunk ranges
         if self._max_connections == "auto":
@@ -219,8 +214,9 @@ class TurboDL:
                     disable=not self._show_progress_bar,
                 ) as progress:
                     progress.add_task("", total=None)
-                    with self._output_path.open("wb") as fo:
-                        fo.truncate(size)
+
+                with self._output_path.open("wb") as fo:
+                    fo.truncate(size)
             else:
                 self._output_path.touch(exist_ok=True)
 

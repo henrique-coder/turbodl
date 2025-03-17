@@ -97,9 +97,9 @@ def download_with_buffer_worker(
                 # Update the progress bar
                 progress.update(TaskID(task_id), advance=len(data))
 
-        # Write any remaining data in the buffer to the file
-        if remaining := chunk_buffers[chunk_id].current_buffer.getvalue():
-            download_with_buffer_writer(output_path, size_bytes, start + write_positions[chunk_id], remaining)
+            # Write any remaining data in the buffer to the file
+            if remaining := chunk_buffers[chunk_id].current_buffer.getvalue():
+                download_with_buffer_writer(output_path, size_bytes, start + write_positions[chunk_id], remaining)
     finally:
         # Clean up the buffer to free memory
         if chunk_id in chunk_buffers and hasattr(chunk_buffers[chunk_id], "current_buffer"):
