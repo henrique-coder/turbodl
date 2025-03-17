@@ -11,8 +11,8 @@ from .exceptions import (
     InvalidFileSizeError,
     NotEnoughSpaceError,
     RemoteFileError,
-    UnidentifiedFileSizeError,
     TurboDLError,
+    UnidentifiedFileSizeError,
 )
 
 
@@ -25,7 +25,7 @@ __all__: list[str] = [
     "InvalidFileSizeError",
     "NotEnoughSpaceError",
     "RemoteFileError",
-    "UnidentifiedFileSizeError",
     "TurboDLError",
+    "UnidentifiedFileSizeError",
 ]
 __version__ = version("turbodl")

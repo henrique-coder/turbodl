@@ -7,7 +7,7 @@ from types import FrameType
 from typing import Literal, NoReturn
 
 # Third-party modules
-from httpx import Client, Limits, Timeout
+from httpx import Client
 from humanfriendly import format_size
 from rich.console import Console
 from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn
@@ -27,7 +27,6 @@ from .utils import (
     has_available_space,
     is_ram_directory,
     truncate_url,
-    validate_headers,
     verify_hash,
 )
 
@@ -62,11 +61,7 @@ class TurboDL:
         self._show_progress_bar: bool = show_progress_bar
         self._output_path: Path | None = None
         self._console: Console = Console()
-        self._http_client: Client = Client(
-            follow_redirects=True,
-            limits=Limits(max_connections=32, max_keepalive_connections=32, keepalive_expiry=60),
-            verify=False,
-        )
+        self._http_client: Client | None = None
         self._chunk_buffers: dict[str, ChunkBuffer] = {}
 
         # Initialize public attributes
@@ -159,17 +154,6 @@ class TurboDL:
             DownloadInterruptedError: If the download is interrupted by the user.
         """
 
-        # Validate and set headers and timeout
-        self._http_client.headers.update(validate_headers(headers))
-
-        # Configure timeout settings
-        custom_timeout = None
-
-        if timeout is not None or inactivity_timeout is not None:
-            custom_timeout = Timeout(connect=30, read=inactivity_timeout, write=inactivity_timeout, pool=timeout)
-
-        self._http_client.timeout = custom_timeout
-
         # Set and resolve the output path
         self._output_path = Path.cwd() if output_path is None else Path(output_path).resolve()
 
@@ -180,12 +164,16 @@ class TurboDL:
             enable_ram_buffer = not is_ram_dir
 
         # Fetch file information from the server
-        remote_file_info = fetch_file_info(self._http_client, url)
+        generated_data = fetch_file_info(url, headers, inactivity_timeout, timeout)
 
-        # Extract and log file details
-        url: str = remote_file_info.url
-        filename: str = remote_file_info.filename
-        size: int | Literal["unknown"] = remote_file_info.size
+        # Extract file information
+        file_info = generated_data[0]
+        url: str = file_info.url
+        filename: str = file_info.filename
+        size: int | Literal["unknown"] = file_info.size
+
+        # Initialize HTTP client
+        self._http_client = generated_data[1]
 
         if size == "unknown":
             raise UnidentifiedFileSizeError(

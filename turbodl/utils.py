@@ -19,9 +19,12 @@ from httpx import (
     ConnectError,
     ConnectTimeout,
     HTTPError,
+    Limits,
     ReadTimeout,
     RemoteProtocolError,
     RequestError,
+    Response,
+    Timeout,
     TimeoutException,
 )
 from psutil import disk_partitions, disk_usage
@@ -412,94 +415,149 @@ def has_available_space(path: str | PathLike, required_size_bytes: int, minimum_
     retry=retry_if_exception_type((HTTPError, RequestError, ConnectError, TimeoutException)),
     reraise=True,
 )
-def fetch_file_info(http_client: Client, url: str) -> RemoteFileInfo:
+def fetch_file_info(
+    url: str, headers: dict[str, str] | None, inactivity_timeout: int | None, timeout: int | None
+) -> tuple[RemoteFileInfo, Client]:
     """
     Fetches and returns the file information of the given URL.
 
     Args:
-        http_client (Client): The HTTP client to use for fetching the file information.
         url (str): The URL of the file to fetch the information for.
+        headers (dict[str, str] | None, optional): Custom headers to use for the request.
+        inactivity_timeout (int | None, optional): Timeout for read/write operations.
+        timeout (int | None, optional): Timeout for the entire request.
 
     Returns:
-        RemoteFileInfo: The file information of the given URL.
+        tuple[RemoteFileInfo, Client]: A tuple containing the file information and the used HTTP client.
     """
 
     if not url:
         raise InvalidArgumentError("URL cannot be empty")
 
-    r = None
-    r_headers = None
+    # Configure timeout settings
+    custom_timeout = None
+
+    if timeout is not None or inactivity_timeout is not None:
+        custom_timeout = Timeout(connect=30, read=inactivity_timeout, write=inactivity_timeout, pool=timeout)
+
+    # Create verified client with proper configuration
+    http_client = Client(
+        follow_redirects=True,
+        limits=Limits(max_connections=32, max_keepalive_connections=32, keepalive_expiry=60),
+        verify=True,
+        timeout=custom_timeout,
+    )
+
+    # Update headers
+    validated_headers = validate_headers(headers)
+    http_client.headers.update(validated_headers)
 
     try:
-        # First try to fetch the file information using a HEAD request
-        r = http_client.head(url)
-        r.raise_for_status()
-        r_headers = r.headers
-    # except ConnectError:
-    #     # If the connection fails, try to fetch the file information disabling verification of the SSL certificate
-    except RemoteProtocolError:
-        # If the server does not support HEAD requests, use a GET request with a range
-        r = http_client.get(url, headers={"Range": "bytes=0-0"})
-        r.raise_for_status()
-        r_headers = r.headers
+        return _attempt_file_info_request(url, http_client)
+    except ConnectError:
+        # Try with unverified client
+        try:
+            http_client_without_verify = Client(
+                follow_redirects=True,
+                limits=Limits(max_connections=32, max_keepalive_connections=32, keepalive_expiry=60),
+                verify=False,
+                timeout=custom_timeout,
+            )
+
+            return _attempt_file_info_request(url, http_client_without_verify)
+        except ConnectError as e:
+            # If unverified client also fails with ConnectError, raise RemoteFileError
+            raise RemoteFileError("Invalid or offline URL") from e
     except HTTPError as e:
         raise RemoteFileError("Invalid or offline URL") from e
+
+
+def _attempt_file_info_request(url: str, client: Client) -> tuple[RemoteFileInfo, Client]:
+    """
+    Attempts to fetch file information using HEAD or GET requests.
+
+    Args:
+        url (str): The URL to fetch information for.
+        client (Client): The HTTP client to use.
+
+    Returns:
+        tuple[RemoteFileInfo, Client]: File information and the client used.
+    """
+
+    try:
+        # First try HEAD request
+        response = client.head(url)
+        response.raise_for_status()
+
+        return _process_response(response), client
+    except RemoteProtocolError:
+        # If server doesn't support HEAD, try GET with range
+        response = client.get(url, headers={"Range": "bytes=0-0"})
+        response.raise_for_status()
+
+        return _process_response(response), client
+
+
+def _process_response(response: Response) -> RemoteFileInfo:
+    """
+    Processes an HTTP response to extract file information.
+
+    Args:
+        response: The HTTP response object.
+
+    Returns:
+        RemoteFileInfo: Extracted file information.
+    """
+
+    r_headers = response.headers
 
     if not r_headers:
         raise RemoteFileError("No headers received from remote server")
 
     size = None
 
+    # Try to parse the Content-Range header to get the file size
     if content_range := r_headers.get("Content-Range"):
-        # Try to parse the Content-Range header to get the file size
         with suppress(ValueError, IndexError):
             size = int(content_range.split("/")[-1])
 
+    # Try to parse the Content-Length header if size is still unknown
     if not size and (content_length := r_headers.get("Content-Length")):
-        # Try to parse the Content-Length header to get the file size
         with suppress(ValueError):
             size = int(content_length)
 
-    # If size is still None or invalid, set it to "unknown" instead of raising an error
+    # If size is still None or invalid, set it to "unknown"
     if not size or size <= 0:
         size = "unknown"
 
     content_type = r_headers.get("content-type", "application/octet-stream").split(";")[0].strip()
-
     filename = None
 
+    # Try to parse the Content-Disposition header to get the filename
     if content_disposition := r_headers.get("Content-Disposition"):
-        # Try to parse the Content-Disposition header to get the filename
         if match := re_search(r"filename\*=(?:UTF-8|utf-8)''\s*(.+)", content_disposition):
             filename = unquote(match.group(1))
         elif match := re_search(r'filename=["\']*([^"\']+)', content_disposition):
             filename = match.group(1)
 
-    url = unquote(str(r.url))
+    response_url = unquote(str(response.url))
 
+    # If no filename was found in the headers, extract it from the URL
     if not filename:
-        # If no filename was found in the headers, extract the filename from the URL
-        path = urlparse(url).path
+        path = urlparse(response_url).path
 
         if path and path != "/":
             filename = Path(unquote(path)).name
 
+    # If still no filename was found, use a default filename
     if not filename:
-        # If no filename was found in the URL, use a default filename
-        path = urlparse(url).path
-
-        if path and path != "/":
-            filename = Path(unquote(path)).name
-
-    if not filename:
-        # If still no filename was found, use a default filename
         filename = "unknown_file"
 
+    # Add extension if missing
     if "." not in filename and (ext := guess_mimetype_extension(content_type)):
-        # If the filename does not have an extension, add the guessed extension
         filename = f"{filename}{ext}"
 
-    return RemoteFileInfo(url=url, filename=filename, mimetype=content_type, size=size)
+    return RemoteFileInfo(url=response_url, filename=filename, mimetype=content_type, size=size)
 
 
 def bool_to_yes_no(value: bool) -> Literal["yes", "no"]:
