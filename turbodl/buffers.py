@@ -1,5 +1,6 @@
 # Standard modules
 from io import BytesIO
+from time import time
 
 # Third-party modules
 from psutil import virtual_memory
@@ -9,7 +10,7 @@ from .constants import CHUNK_SIZE, MAX_BUFFER_SIZE, MAX_RAM_USAGE
 
 
 class ChunkBuffer:
-    """A ChunkBuffer is a memory buffer that stores a chunk of a file being downloaded. It is used to avoid writing too much data to disk at once, which can be slow."""
+    """A ChunkBuffer is a memory buffer that stores a chunk of a file being downloaded."""
 
     def __init__(self, chunk_size_bytes: int = CHUNK_SIZE, max_buffer_size_bytes: int = MAX_BUFFER_SIZE) -> None:
         """
@@ -24,9 +25,12 @@ class ChunkBuffer:
 
         # Make sure the max buffer size is not larger than the available memory
         self.max_buffer_size = min(max_buffer_size_bytes, int(virtual_memory().available * MAX_RAM_USAGE))
+
+        # Initialize the buffer
         self.current_buffer = BytesIO()
         self.current_size = 0
         self.total_buffered = 0
+        self.last_activity_time = time()
 
     def write(self, data: bytes, total_file_size_bytes: int) -> bytes | None:
         """
@@ -39,6 +43,8 @@ class ChunkBuffer:
         Returns:
             bytes | None: A chunk of data if the buffer is full, otherwise None.
         """
+
+        self.last_activity_time = time()
 
         data_size = len(data)
 
@@ -71,6 +77,20 @@ class ChunkBuffer:
             return chunk_data
 
         return None
+
+    def reset_buffer(self) -> None:
+        """Reset the buffer to free memory without losing tracking information."""
+
+        if self.current_size > 0:
+            # Preserve the data if there's any
+            data = self.current_buffer.getvalue()
+            self.current_buffer.close()
+            self.current_buffer = BytesIO()
+            self.current_buffer.write(data)
+        else:
+            # Just create a new empty buffer
+            self.current_buffer.close()
+            self.current_buffer = BytesIO()
 
     def __del__(self) -> None:
         """Destructor for the ChunkBuffer. Closes the BytesIO object to free up memory."""
