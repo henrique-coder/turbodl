@@ -92,13 +92,13 @@ def download_retry_decorator(func: Callable[..., Any]) -> Callable[..., Any]:
         )),  # Retry on connection errors, timeouts, or remote protocol errors
         reraise=True,  # Reraise the last exception if all retries fail
     )
-    def wrapper(*args: Any, **kwargs: Any) -> Any:
+    def wrapper(*args, **kwargs) -> Any:
         """
         The decorated function with retry logic.
 
         Args:
-            *args (Any): The positional arguments to be passed to the decorated function.
-            *kwargs (Any): The keyword arguments to be passed to the decorated function.
+            *args: The positional arguments to be passed to the decorated function.
+            **kwargs: The keyword arguments to be passed to the decorated function.
 
         Returns:
             Any: The result of the decorated function.
