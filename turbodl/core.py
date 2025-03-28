@@ -8,7 +8,7 @@ from typing import Literal, NoReturn
 
 # Third-party modules
 from httpx import Client
-from humanfriendly import format_size
+from humanfriendly import InvalidSize, format_size, parse_size
 from rich.console import Console
 from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn
 
@@ -176,9 +176,16 @@ class TurboDL:
         self._http_client = generated_data[1]
 
         if size == "unknown":
-            raise UnidentifiedFileSizeError(
-                "Unable to detect file size. Support for files without a fixed size is under development."
-            )
+            try:
+                size = parse_size(
+                    self._console.input(
+                        "[bold yellow][!] File size is unknown. Please enter the file size manually: [bold red]", emoji=False
+                    )
+                )
+            except (InvalidSize, Exception) as e:
+                raise UnidentifiedFileSizeError(
+                    "Failed to parse the file size. Please provide a valid file size (e.g., 25MB, 800MiB, 1.5GB ...)."
+                ) from e
 
         # Calculate optimal connections and chunk ranges
         if self._max_connections == "auto":
