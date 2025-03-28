@@ -4,14 +4,6 @@ VENV := .venv
 .PHONY: setup-venv install lint format tests demo help
 .DEFAULT_GOAL := help
 
-setup-venv:
-	@echo "Creating virtual environment..."
-	@test -d $(VENV) || $(PYTHON) -m venv $(VENV)
-	@$(VENV)/bin/pip install --upgrade pip
-	@$(VENV)/bin/pip install --upgrade poetry
-	@touch $(VENV)
-	@echo "Virtual environment created at $(VENV) with Poetry installed"
-
 install:
 	poetry update
 	poetry install
@@ -33,7 +25,6 @@ demo:
 
 help:
 	@echo "Available commands:"
-	@echo "  setup-venv  - Create a virtual environment"
 	@echo "  install     - Update dependencies, poetry.lock file, and install project"
 	@echo "  lint        - Check code with ruff"
 	@echo "  format      - Format code with ruff"
