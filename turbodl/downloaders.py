@@ -20,10 +20,10 @@ def download_with_buffer_writer(output_path: str | PathLike, size_bytes: int, po
     Write the downloaded chunk to the file.
 
     Args:
-        output_path (str | PathLike): The path to the file.
-        size_bytes (int): The size of the file in bytes.
-        position (int): The position to start writing the data in the file.
-        data (bytes): The data to be written.
+        output_path: The path to the file.
+        size_bytes: The size of the file in bytes.
+        position: The position to start writing the data in the file.
+        data: The data to be written.
     """
 
     with Path(output_path).open("r+b") as f:
@@ -37,6 +37,7 @@ def download_with_buffer_writer(output_path: str | PathLike, size_bytes: int, po
         # Write the data to the file
         with mmap(f.fileno(), length=size_bytes, access=ACCESS_WRITE) as mm:
             mm[position : position + len(data)] = data
+
             # Flush the data to disk
             mm.flush()
 
@@ -59,17 +60,17 @@ def download_with_buffer_worker(
     Worker function for downloading a file chunk using a buffer.
 
     Args:
-        http_client (Client): The HTTP client to use for the request.
-        url (str): The URL of the file to download.
-        output_path (str | PathLike): The path to save the downloaded file.
-        size_bytes (int): The total size of the file in bytes.
-        chunk_buffers (dict[str, ChunkBuffer]): A dictionary of chunk buffers.
-        write_positions (list[int]): List of write positions for each chunk.
-        start (int): The start byte of the chunk.
-        end (int): The end byte of the chunk.
-        chunk_id (int): The ID of the chunk being processed.
-        task_id (int): The task ID for progress tracking.
-        progress (Progress): The progress tracker.
+        http_client: The HTTP client to use for the request.
+        url: The URL of the file to download.
+        output_path: The path to save the downloaded file.
+        size_bytes: The total size of the file in bytes.
+        chunk_buffers: A dictionary of chunk buffers.
+        write_positions: List of write positions for each chunk.
+        start: The start byte of the chunk.
+        end: The end byte of the chunk.
+        chunk_id: The ID of the chunk being processed.
+        task_id: The task ID for progress tracking.
+        progress: The progress tracker.
     """
 
     try:
@@ -120,14 +121,14 @@ def download_with_buffer(
     Download a file using multiple buffered chunk downloads.
 
     Args:
-        http_client (Client): The HTTP client to use for the request.
-        url (str): The URL of the file to download.
-        output_path (str | PathLike): The path to save the downloaded file.
-        size_bytes (int): The total size of the file in bytes.
-        chunk_buffers (dict[str, ChunkBuffer]): A dictionary of chunk buffers.
-        chunk_ranges (Sequence[tuple[int, int]]): A sequence of (start, end) byte ranges for each chunk.
-        task_id (int): The task ID for progress tracking.
-        progress (Progress): The progress tracker.
+        http_client: The HTTP client to use for the request.
+        url: The URL of the file to download.
+        output_path: The path to save the downloaded file.
+        size_bytes: The total size of the file in bytes.
+        chunk_buffers: A dictionary of chunk buffers.
+        chunk_ranges: A sequence of (start, end) byte ranges for each chunk.
+        task_id: The task ID for progress tracking.
+        progress: The progress tracker.
     """
 
     # Initialize write positions for each chunk
@@ -167,13 +168,13 @@ def download_without_buffer_worker(
     Download a chunk of a file without using a buffer.
 
     Args:
-        http_client (Client): The HTTP client to use for the request.
-        url (str): The URL of the file to download.
-        output_path (str | PathLike): The path to save the downloaded file.
-        start (int): The start byte position of the chunk.
-        end (int): The end byte position of the chunk.
-        task_id (int): The task ID for progress tracking.
-        progress (Progress): The progress tracker.
+        http_client: The HTTP client to use for the request.
+        url: The URL of the file to download.
+        output_path: The path to save the downloaded file.
+        start: The start byte position of the chunk.
+        end: The end byte position of the chunk.
+        task_id: The task ID for progress tracking.
+        progress: The progress tracker.
     """
 
     # Lock for writing to the file
@@ -194,8 +195,10 @@ def download_without_buffer_worker(
             # Acquire the write lock and seek to the correct position in the file
             with write_lock, Path(output_path).open("r+b") as fo:
                 fo.seek(start)
+
                 # Write the chunk to the file
                 fo.write(data)
+
                 # Advance the start position
                 start += chunk_len
 
@@ -215,12 +218,12 @@ def download_without_buffer(
     Download a file in chunks using multiple threads and without using a buffer.
 
     Args:
-        http_client (Client): The HTTP client to use for the request.
-        url (str): The URL of the file to download.
-        output_path (str | PathLike): The path to save the downloaded file.
-        chunk_ranges (Sequence[tuple[int, int]]): A sequence of (start, end) byte ranges for each chunk.
-        task_id (int): The task ID for progress tracking.
-        progress (Progress): The progress tracker.
+        http_client: The HTTP client to use for the request.
+        url: The URL of the file to download.
+        output_path: The path to save the downloaded file.
+        chunk_ranges: A sequence of (start, end) byte ranges for each chunk.
+        task_id: The task ID for progress tracking.
+        progress: The progress tracker.
     """
 
     # Use a thread pool to download each chunk in parallel
