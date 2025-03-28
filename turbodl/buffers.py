@@ -17,8 +17,8 @@ class ChunkBuffer:
         Initialize a ChunkBuffer with the given chunk size and max buffer size.
 
         Args:
-            chunk_size_bytes (int): The maximum size of each chunk in bytes.
-            max_buffer_size_bytes (int): The maximum size of the buffer in bytes.
+            chunk_size_bytes: The maximum size of each chunk in bytes.
+            max_buffer_size_bytes: The maximum size of the buffer in bytes.
         """
 
         self.chunk_size = chunk_size_bytes
@@ -37,11 +37,11 @@ class ChunkBuffer:
         Write data to the buffer, and return a chunk of data if the buffer is full.
 
         Args:
-            data (bytes): The data to write to the buffer.
-            total_file_size_bytes (int): The total size of the file in bytes.
+            data: The data to write to the buffer.
+            total_file_size_bytes: The total size of the file in bytes.
 
         Returns:
-            bytes | None: A chunk of data if the buffer is full, otherwise None.
+            A chunk of data if the buffer is full, otherwise None.
         """
 
         self.last_activity_time = time()

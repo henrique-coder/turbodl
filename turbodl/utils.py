@@ -54,10 +54,10 @@ class RemoteFileInfo:
     Dataclass for storing information about a remote file.
 
     Attributes:
-        url (str): The URL of the remote file.
-        filename (str): The filename of the remote file.
-        mimetype (str): The MIME type of the remote file.
-        size (int | Literal["unknown"]): The size of the remote file in bytes.
+        url: The URL of the remote file.
+        filename: The filename of the remote file.
+        mimetype: The MIME type of the remote file.
+        size: The size of the remote file in bytes.
     """
 
     url: str
@@ -70,29 +70,22 @@ def download_retry_decorator(func: Callable[..., Any]) -> Callable[..., Any]:
     """
     Decorator that adds retry logic to the decorated function.
 
-    The decorated function will be retried up to 5 times with an exponential backoff
-    strategy in case of a connection error, timeout, or remote protocol error.
+    The decorated function will be retried up to 5 times with an exponential backoff strategy in case of a connection error, timeout, or remote protocol error.
 
     Args:
-        func (Callable[..., Any]): The function to be decorated.
+        func: The function to be decorated.
 
     Returns:
-        Callable[..., Any]: The decorated function.
+        The decorated function.
     """
 
     @retry(
-        stop=stop_after_attempt(5),  # Stop retrying after 5 attempts
-        wait=wait_exponential(min=2, max=120),  # Wait for 2 seconds on the first retry, then 4 seconds, then 8 seconds, and so on
-        retry=retry_if_exception_type((
-            ConnectError,
-            ConnectTimeout,
-            ReadTimeout,
-            RemoteProtocolError,
-            TimeoutException,
-        )),  # Retry on connection errors, timeouts, or remote protocol errors
-        reraise=True,  # Reraise the last exception if all retries fail
+        stop=stop_after_attempt(5),
+        wait=wait_exponential(min=2, max=120),
+        retry=retry_if_exception_type((ConnectError, ConnectTimeout, ReadTimeout, RemoteProtocolError, TimeoutException)),
+        reraise=True,
     )
-    def wrapper(*args, **kwargs) -> Any:
+    def wrapper(*args: Any, **kwargs: Any) -> Any:
         """
         The decorated function with retry logic.
 
@@ -101,7 +94,7 @@ def download_retry_decorator(func: Callable[..., Any]) -> Callable[..., Any]:
             **kwargs: The keyword arguments to be passed to the decorated function.
 
         Returns:
-            Any: The result of the decorated function.
+            The result of the decorated function.
         """
 
         return func(*args, **kwargs)
@@ -117,7 +110,7 @@ class CustomDownloadColumn(DownloadColumn):
         Initialize a custom progress bar download column with the specified style.
 
         Args:
-            style (str | None): The style of the download column. Defaults to None.
+            style: The style of the download column. Defaults to None.
         """
 
         self.style = style
@@ -130,10 +123,10 @@ class CustomDownloadColumn(DownloadColumn):
         Render the download column with the specified style.
 
         Args:
-            task (Task): The task object to render.
+            task: The task object to render.
 
         Returns:
-            Text: The rendered download column.
+            The rendered download column.
         """
 
         download_text = super().render(task)
@@ -153,7 +146,7 @@ class CustomSpeedColumn(TransferSpeedColumn):
         Initialize a custom progress bar speed column with the specified style.
 
         Args:
-            style (str | None): The style of the speed column. Defaults to None.
+            style: The style of the speed column. Defaults to None.
         """
 
         self.style = style
@@ -166,10 +159,10 @@ class CustomSpeedColumn(TransferSpeedColumn):
         Render the speed column with the specified style.
 
         Args:
-            task (Task): The task object to render.
+            task: The task object to render.
 
         Returns:
-            Text: The rendered speed column.
+            The rendered speed column.
         """
 
         # Render the speed column
@@ -197,11 +190,11 @@ class CustomTimeColumn(ProgressColumn):
         Initialize a custom time column with specified styles.
 
         Args:
-            elapsed_style (str): Style for elapsed time. Defaults to "white".
-            remaining_style (str | None): Style for remaining time. Defaults to None.
-            parentheses_style (str | None): Style for parentheses. Defaults to None.
-            separator (str | None): Separator between time elements. Defaults to None.
-            separator_style (str | None): Style for the separator. Defaults to None or elapsed_style if separator is provided.
+            elapsed_style: Style for elapsed time. Defaults to "white".
+            remaining_style: Style for remaining time. Defaults to None.
+            parentheses_style: Style for parentheses. Defaults to None.
+            separator: Separator between time elements. Defaults to None.
+            separator_style: Style for the separator. Defaults to None or elapsed_style if separator is provided.
         """
 
         self.elapsed_style: str = elapsed_style
@@ -219,10 +212,10 @@ class CustomTimeColumn(ProgressColumn):
         Format the given time in seconds to a human-readable format.
 
         Args:
-            seconds (float | None): The time in seconds to format.
+            seconds: The time in seconds to format.
 
         Returns:
-            str: The formatted time string.
+            The formatted time string.
         """
 
         if seconds is None or seconds < 0:
@@ -260,10 +253,10 @@ class CustomTimeColumn(ProgressColumn):
         Render the time column with elapsed and remaining time in a specified style.
 
         Args:
-            task (Task): The task object containing time information.
+            task: The task object containing time information.
 
         Returns:
-            Text: The styled and formatted time column.
+            The styled and formatted time column.
         """
 
         # Determine elapsed and remaining time
@@ -302,10 +295,10 @@ def validate_headers(headers: dict[str, str] | None) -> dict[str, str]:
     Validate and merge headers with the default and required headers.
 
     Args:
-        headers (dict[str, str] | None): A dictionary of user-provided headers.
+        headers: A dictionary of user-provided headers.
 
     Returns:
-        dict[str, str]: A dictionary containing the merged headers.
+        A dictionary containing the merged headers.
 
     Raises:
         InvalidArgumentError: If any required headers are attempted to be overridden.
@@ -344,10 +337,10 @@ def get_filesystem_type(path: str | Path) -> str | None:
     Get the file system type of the given path.
 
     Args:
-        path (str | Path): The path to get the file system type for.
+        path: The path to get the file system type for.
 
     Returns:
-        str | None: The file system type or None if the file system type could not be determined.
+        The file system type or None if the file system type could not be determined.
     """
 
     # Resolve the path to an absolute path
@@ -371,10 +364,10 @@ def is_ram_directory(path: str | PathLike) -> bool:
     Check if a given path is a RAM disk or a temporary file system.
 
     Args:
-        path (str | PathLike): The path to check.
+        path: The path to check.
 
     Returns:
-        bool: True if the path is a RAM disk or a temporary file system, False otherwise.
+        True if the path is a RAM disk or a temporary file system, False otherwise.
     """
 
     return get_filesystem_type(path) in RAM_FILESYSTEMS
@@ -385,12 +378,12 @@ def has_available_space(path: str | PathLike, required_size_bytes: int, minimum_
     Check if a given path has enough available space to store a file of the given size.
 
     Args:
-        path (str | PathLike): The path to check.
-        required_size_bytes (int): The minimum required size in bytes.
-        minimum_free_space_bytes (int, optional): The minimum free space in bytes required. Defaults to 1GB.
+        path: The path to check.
+        required_size_bytes: The minimum required size in bytes.
+        minimum_free_space_bytes: The minimum free space in bytes required. Defaults to 1GB.
 
     Returns:
-        bool: True if there is enough available space, False otherwise.
+        True if there is enough available space, False otherwise.
     """
 
     path = Path(path)
@@ -422,13 +415,17 @@ def fetch_file_info(
     Fetches and returns the file information of the given URL.
 
     Args:
-        url (str): The URL of the file to fetch the information for.
-        headers (dict[str, str] | None, optional): Custom headers to use for the request.
-        inactivity_timeout (int | None, optional): Timeout for read/write operations.
-        timeout (int | None, optional): Timeout for the entire request.
+        url: The URL of the file to fetch the information for.
+        headers: Custom headers to use for the request.
+        inactivity_timeout: Timeout for read/write operations.
+        timeout: Timeout for the entire request.
 
     Returns:
-        tuple[RemoteFileInfo, Client]: A tuple containing the file information and the used HTTP client.
+        A tuple containing the file information and the used HTTP client.
+
+    Raises:
+        InvalidArgumentError: If the URL is empty.
+        RemoteFileError: If there is a problem with the remote file.
     """
 
     if not url:
@@ -469,6 +466,7 @@ def fetch_file_info(
             # If unverified client also fails with ConnectError, raise RemoteFileError
             raise RemoteFileError("Invalid or offline URL") from e
     except HTTPError as e:
+        # If HTTPError is raised, raise RemoteFileError
         raise RemoteFileError("Invalid or offline URL") from e
 
 
@@ -477,11 +475,11 @@ def _attempt_file_info_request(url: str, client: Client) -> tuple[RemoteFileInfo
     Attempts to fetch file information using HEAD or GET requests.
 
     Args:
-        url (str): The URL to fetch information for.
-        client (Client): The HTTP client to use.
+        url: The URL to fetch information for.
+        client: The HTTP client to use.
 
     Returns:
-        tuple[RemoteFileInfo, Client]: File information and the client used.
+        File information and the client used.
     """
 
     try:
@@ -506,7 +504,7 @@ def _process_response(response: Response) -> RemoteFileInfo:
         response: The HTTP response object.
 
     Returns:
-        RemoteFileInfo: Extracted file information.
+        Extracted file information.
     """
 
     r_headers = response.headers
@@ -565,10 +563,10 @@ def bool_to_yes_no(value: bool) -> Literal["yes", "no"]:
     Converts a boolean value to a "yes" or "no" string.
 
     Args:
-        value (bool): The boolean value to convert.
+        value: The boolean value to convert.
 
     Returns:
-        Literal["yes", "no"]: The converted string.
+        The converted string.
     """
 
     return YES_NO_VALUES[value]
@@ -578,15 +576,14 @@ def generate_chunk_ranges(size_bytes: int, max_connections: int) -> list[tuple[i
     """
     Generate chunk ranges for downloading a file in parallel.
 
-    This function divides the file size into multiple chunks based on the
-    number of connections, ensuring each chunk is within defined size limits.
+    This function divides the file size into multiple chunks based on the number of connections, ensuring each chunk is within defined size limits.
 
     Args:
-        size_bytes (int): The total size of the file in bytes.
-        max_connections (int): The maximum number of connections to use.
+        size_bytes: The total size of the file in bytes.
+        max_connections: The maximum number of connections to use.
 
     Returns:
-        list[tuple[int, int]]: A list of (start, end) byte ranges for each chunk.
+        A list of (start, end) byte ranges for each chunk.
     """
 
     # Calculate the size of each chunk, bounded by min and max chunk size
@@ -600,10 +597,13 @@ def generate_chunk_ranges(size_bytes: int, max_connections: int) -> list[tuple[i
         # Determine the size of the current chunk
         current_chunk = min(chunk_size, remaining_bytes)
         end = start + current_chunk - 1
+
         # Append the (start, end) range for this chunk
         ranges.append((start, end))
+
         # Move the start position to the next chunk
         start = end + 1
+
         # Reduce the remaining bytes by the current chunk size
         remaining_bytes -= current_chunk
 
@@ -689,8 +689,7 @@ def calculate_max_connections(size_bytes: int, connection_speed_mbps: float) -> 
         # Large files on slow connections need more connections to maintain progress
         adjusted_conn = min(adjusted_conn * 1.2, MAX_CONNECTIONS)
     elif size_mb > 5000 and connection_speed_mbps > 300:
-        # Very large files on very fast connections benefit from more connections
-        # but with diminishing returns beyond a certain point
+        # Very large files on very fast connections benefit from more connections but with diminishing returns beyond a certain point
         adjusted_conn = min(adjusted_conn * 1.1, MAX_CONNECTIONS)
 
     # Apply minimum and maximum limits with rounding
@@ -704,10 +703,10 @@ def verify_hash(file_path: str | PathLike, expected_hash: str, hash_type: str, c
     Verify the hash of a file against an expected hash value.
 
     Args:
-        file_path (str | PathLike): Path to the file to verify.
-        expected_hash (str): The expected hash value to compare against.
-        hash_type (str): The hash algorithm to use (e.g., 'md5', 'sha256').
-        chunk_size (int, optional): Size of the chunks to read from the file. Defaults to 1MB.
+        file_path: Path to the file to verify.
+        expected_hash: The expected hash value to compare against.
+        hash_type: Hash algorithm to use for verification.
+        chunk_size: Size of the chunks to read from the file. Defaults to 1MB.
 
     Raises:
         HashVerificationError: If the computed hash does not match the expected hash.
@@ -742,16 +741,15 @@ def verify_hash(file_path: str | PathLike, expected_hash: str, hash_type: str, c
 
 def truncate_url(url: str, max_width: int | None = None, truncate_indicator: str = "…") -> str:
     """
-    Truncates a URL to fit in a given width while preserving the scheme, domain,
-    and a sufficient part of the path.
+    Truncates a URL to fit in a given width while preserving the scheme, domain, and a sufficient part of the path.
 
     Args:
-        url (str): The URL to truncate.
-        max_width (int | None): The maximum width of the output string. If None, the width of the current terminal is used.
-        truncate_indicator (str): The string to use as the truncation indicator. Defaults to "…".
+        url: The URL to truncate.
+        max_width: The maximum width of the output string. If None, the width of the current terminal is used.
+        truncate_indicator: The string to use as the truncation indicator. Defaults to "…".
 
     Returns:
-        str: The truncated URL.
+        The truncated URL.
     """
 
     if max_width is None:
@@ -759,8 +757,10 @@ def truncate_url(url: str, max_width: int | None = None, truncate_indicator: str
 
     # Reserve space for the size text
     size_text_max_length: int = 15
+
     # Reserve space for the prefix
     prefix_length: int = 14
+
     # Reserve space for the suffix
     suffix_length: int = 3
 

@@ -39,9 +39,9 @@ class TurboDL:
         Initialize a TurboDL instance with specified settings.
 
         Args:
-            max_connections (int | Literal['auto']): Maximum connections for parallel downloading. Minimum is 1 and maximum is 32. Defaults to 'auto'.
-            connection_speed_mbps (float): Your current internet connection speed in Mbps. Defaults to 100.
-            show_progress_bar (bool): Whether to display a progress bar. Defaults to True.
+            max_connections: Maximum connections for parallel downloading. Minimum is 1 and maximum is 32. Defaults to 'auto'.
+            connection_speed_mbps: Your current internet connection speed in Mbps. Defaults to 100.
+            show_progress_bar: Whether to display a progress bar. Defaults to True.
         """
 
         # Setup signal handlers for clean exit
@@ -82,8 +82,8 @@ class TurboDL:
         This method is called when the process receives a termination signal (e.g., SIGINT or SIGTERM). It ensures that necessary cleanup is performed before exiting the application.
 
         Args:
-            signum (Signals): The signal number received.
-            frame (FrameType | None): The current stack frame.
+            signum: The signal number received.
+            frame: The current stack frame.
         """
 
         # Perform cleanup operations
@@ -135,20 +135,20 @@ class TurboDL:
             "shake_256",
         ] = "md5",
     ) -> None:
-        """Download a file from the given URL to the specified output path.
+        """
+        Download a file from the given URL to the specified output path.
 
         Args:
-            url (str): The URL of the file to download.
-            output_path (str | PathLike | None): The path to save the downloaded file. If it is a directory, filename is derived from server response. If None, the current working directory is used. Defaults to None.
-            pre_allocate_space (bool): Whether to pre-allocate disk space for the file. Defaults to False.
-            enable_ram_buffer (bool | Literal["auto"]): Use RAM buffer for download. If set to False, the file will be downloaded continuously to disk. If set to True, the file will be downloaded with the help of RAM memory. If set to "auto", the RAM buffer will be disabled if the output path is a RAM directory and enabled otherwise. Defaults to "auto".
-            overwrite (bool): Whether to overwrite the file if it already exists. Defaults to True.
-            headers (dict[str, str] | None): A dictionary of headers to include in the request. Defaults to None.
-            inactivity_timeout (int | None): Timeout in seconds after the connection is considered idle. None means no timeout. Defaults to 120.
-            timeout (int | None): Overall timeout in seconds. None means no timeout. Defaults to None.
-            expected_hash (str | None): The expected hash value of the downloaded file. If provided, the file will be verified after download. Defaults to None.
-            hash_type (Literal["md5", "sha1", "sha224", "sha256", "sha384", "sha512", "blake2b", "blake2s", "sha3_224", "sha3_256", "sha3_384", "sha3_512", "shake_128", "shake_256"]): Hash algorithm to use for verification. Available: md5, sha1, sha224, sha256, sha384, sha512, blake2b, blake2s, sha3_224, sha3_256, sha3_384, sha3_512, shake_128, shake_256. Defaults to "md5".
-
+            url: The URL of the file to download.
+            output_path: The path to save the downloaded file. If it is a directory, filename is derived from server response. If None, the current working directory is used. Defaults to None.
+            pre_allocate_space: Whether to pre-allocate disk space for the file. Defaults to False.
+            enable_ram_buffer: Use RAM buffer for download. If set to False, the file will be downloaded continuously to disk. If set to True, the file will be downloaded with the help of RAM memory. If set to "auto", the RAM buffer will be disabled if the output path is a RAM directory and enabled otherwise. Defaults to "auto".
+            overwrite: Whether to overwrite the file if it already exists. Defaults to True.
+            headers: A dictionary of headers to include in the request. Defaults to None.
+            inactivity_timeout: Timeout in seconds after the connection is considered idle. None means no timeout. Defaults to 120.
+            timeout: Overall timeout in seconds. None means no timeout. Defaults to None.
+            expected_hash: The expected hash value of the downloaded file. If provided, the file will be verified after download. Defaults to None.
+            hash_type: Hash algorithm to use for verification. Available: md5, sha1, sha224, sha256, sha384, sha512, blake2b, blake2s, sha3_224, sha3_256, sha3_384, sha3_512, shake_128, shake_256. Defaults to "md5".
         Raises:
             NotEnoughSpaceError: If there's not enough space to download the file.
             DownloadInterruptedError: If the download is interrupted by the user.
@@ -258,10 +258,14 @@ class TurboDL:
                 else:
                     download_without_buffer(self._http_client, url, self._output_path, chunk_ranges, task_id, progress)
         except KeyboardInterrupt as e:
-            self._cleanup()  # Clean up after interruption
+            # Clean up after interruption
+            self._cleanup()
+
             raise DownloadInterruptedError("Download interrupted by user") from e
         except Exception as e:
-            self._cleanup()  # Clean up after failure
+            # Clean up after failure
+            self._cleanup()
+
             raise e
 
         # Set the output path attribute
