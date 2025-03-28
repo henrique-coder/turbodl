@@ -24,8 +24,17 @@ TurboDL is an extremely smart, fast, and efficient download manager designed to 
 ## 📦 Installation
 
 ```bash
-pip install --upgrade turbodl  # Install the latest version of TurboDL
+# Install the stable version of TurboDL from PyPI (recommended)
+pip install --upgrade turbodl
+
+# Install the beta version of TurboDL from GitHub
+pip install --upgrade git+https://github.com/henrique-coder/turbodl.git@main
+
+# Install the development version of TurboDL from GitHub
+pip install --upgrade git+https://github.com/henrique-coder/turbodl.git@dev
 ```
+
+⚠️ **Warning**: if you already have a version installed and want to switch to a different branch (for example, to test new features or fix bugs), you will need to use the `--force-reinstall` parameter to ensure the upgrade occurs correctly.
 
 ## 🔍 Examples
 

@@ -8,7 +8,7 @@ __pycache__
 .pytest_cache
 
 # Directories
-# ...
+server
 
 # Files
 dev.py

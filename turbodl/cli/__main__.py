@@ -86,6 +86,7 @@ def download(
     no_overwrite: bool = Option(
         False, "--no-overwrite", "-no", help="Don't overwrite existing files (overwrite by default).", is_flag=True
     ),
+    inactivity_timeout: int = Option(None, "--inactivity-timeout", "-it", help="Download inactivity timeout in seconds."),
     timeout: int = Option(None, "--timeout", "-t", help="Download timeout in seconds."),
     expected_hash: str = Option(None, "--expected-hash", "-eh", help="Expected file hash for verification."),
     hash_type: str = Option(
@@ -125,6 +126,7 @@ def download(
             pre_allocate_space=allocate_space,
             enable_ram_buffer=ram_buffer,
             overwrite=not no_overwrite,
+            inactivity_timeout=inactivity_timeout,
             timeout=timeout,
             expected_hash=expected_hash,
             hash_type=hash_type,
