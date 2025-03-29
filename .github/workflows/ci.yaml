@@ -28,19 +28,38 @@ jobs:
           fetch-depth: 0
 
       - name: 🐍 Setup Python
+        id: setup-python
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
           cache: pip
           check-latest: true
 
+      - name: 📦 Cache Poetry installation
+        uses: actions/cache@v4
+        with:
+          path: ~/.local
+          key: poetry-local-${{ runner.os }}-${{ matrix.python-version }}-1.0.0
+          restore-keys: |
+            poetry-local-${{ runner.os }}-${{ matrix.python-version }}-
+
       - name: 🔧 Install Poetry
         run: |
           python -m pip install --upgrade pip
           pip install --upgrade poetry
 
+      - name: 📦 Cache Poetry dependencies
+        uses: actions/cache@v4
+        with:
+          path: .venv
+          key: poetry-deps-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('**/poetry.lock') }}
+          restore-keys: |
+            poetry-deps-${{ runner.os }}-${{ matrix.python-version }}-
+
       - name: 📚 Install Dependencies
-        run: poetry install --with test
+        run: |
+          poetry config virtualenvs.in-project true
+          poetry install --with test --no-interaction
 
       - name: 🧪 Run Tests
         id: tests
