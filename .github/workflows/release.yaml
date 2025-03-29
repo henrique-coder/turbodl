@@ -82,6 +82,20 @@ jobs:
           cache: pip
           check-latest: true
 
+      - name: 💾 Cache Poetry
+        if: steps.check_version.outputs.should_continue == 'true'
+        uses: actions/cache@v4
+        with:
+          path: ~/.local
+          key: poetry-local-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}
+
+      - name: 💾 Cache Poetry Dependencies
+        if: steps.check_version.outputs.should_continue == 'true'
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pypoetry
+          key: poetry-cache-${{ runner.os }}-python-3.13-${{ hashFiles('**/poetry.lock') }}
+
       - name: 🔧 Install Build Tools
         if: steps.check_version.outputs.should_continue == 'true'
         run: |
