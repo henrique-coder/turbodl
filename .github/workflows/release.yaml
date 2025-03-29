@@ -82,35 +82,18 @@ jobs:
           cache: pip
           check-latest: true
 
-      - name: 💾 Cache Poetry
-        if: steps.check_version.outputs.should_continue == 'true'
-        uses: actions/cache@v4
-        with:
-          path: ~/.local
-          key: poetry-local-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}
-
-      - name: 💾 Cache Poetry Dependencies
-        if: steps.check_version.outputs.should_continue == 'true'
-        uses: actions/cache@v4
-        with:
-          path: .venv
-          key: poetry-deps-${{ runner.os }}-python-${{ matrix.python-version }}-${{ hashFiles('**/poetry.lock') }}
-
-      - name: 🔧 Install Poetry and Dependencies
+      - name: 🔧 Install Build Tools
         if: steps.check_version.outputs.should_continue == 'true'
         run: |
-          python -m pip install --upgrade pip
-          pip install poetry
-          poetry config virtualenvs.in-project true
-          poetry install --no-interaction --no-root
+          python -m pip install --upgrade pip build twine yq
 
       - name: 🏗️ Build Package
         if: steps.check_version.outputs.should_continue == 'true'
-        run: poetry build
+        run: python -m build --sdist --wheel
 
       - name: ✅ Validate Metadata
         if: steps.check_version.outputs.should_continue == 'true'
-        run: poetry run twine check dist/*
+        run: twine check dist/*
 
       - name: 🌍 Set Timezone
         if: steps.check_version.outputs.should_continue == 'true'

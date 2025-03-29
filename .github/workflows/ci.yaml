@@ -34,24 +34,14 @@ jobs:
           cache: pip
           check-latest: true
 
-      - name: 💾 Cache Poetry
-        uses: actions/cache@v4
-        with:
-          path: ~/.local
-          key: poetry-local-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}
-
-      - name: 💾 Cache Poetry Dependencies
-        uses: actions/cache@v4
-        with:
-          path: .venv
-          key: poetry-deps-${{ runner.os }}-python-${{ matrix.python-version }}-${{ hashFiles('**/poetry.lock') }}
-
-      - name: 🔧 Install Poetry and Dependencies
+      - name: 🔧 Install Poetry
         run: |
           python -m pip install --upgrade pip
-          pip install poetry
-          poetry config virtualenvs.in-project true
-          poetry install --no-interaction --no-root
+          pip install --upgrade poetry
+
+      - name: 📚 Install Dependencies
+        run: poetry install --with test
 
       - name: 🧪 Run Tests
-        run: poetry run make tests
+        id: tests
+        run: make tests
