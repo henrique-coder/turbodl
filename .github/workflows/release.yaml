@@ -1,4 +1,4 @@
-name: Auto Release Creation and PyPI Publishing
+name: 🚀 Auto Release Creation and PyPI Publishing
 
 on:
   push:
@@ -18,14 +18,9 @@ jobs:
   create-release-and-publish:
     name: 🏷️ Create Release and Publish to PyPI
     runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - name: 🔒 Security Scan Dependencies
-        uses: step-security/harden-runner@v2
-        with:
-          egress-policy: audit
-          disable-sudo: true
+    timeout-minutes: 15
 
+    steps:
       - name: 📥 Checkout Repository
         uses: actions/checkout@v4
         with:
@@ -34,12 +29,9 @@ jobs:
       - name: 📚 Load Release Config
         id: release_config
         run: |
-          PACKAGE_NAME=$(yq '.package.name' .github/release-config.yaml)
-          PACKAGE_TITLE=$(yq '.package.title' .github/release-config.yaml)
-          PACKAGE_DESC=$(yq '.package.description' .github/release-config.yaml)
-          echo "pkg_name=$PACKAGE_NAME" >> $GITHUB_OUTPUT
-          echo "pkg_title=$PACKAGE_TITLE" >> $GITHUB_OUTPUT
-          echo "pkg_desc=$PACKAGE_DESC" >> $GITHUB_OUTPUT
+          echo "pkg_name=$(yq '.package.name' .github/release-config.yaml)" >> $GITHUB_OUTPUT
+          echo "pkg_title=$(yq '.package.title' .github/release-config.yaml)" >> $GITHUB_OUTPUT
+          echo "pkg_desc=$(yq '.package.description' .github/release-config.yaml)" >> $GITHUB_OUTPUT
 
       - name: 📝 Extract Version and Text from Changelog
         id: version_info
@@ -47,8 +39,6 @@ jobs:
           VERSION=$(grep -oP '## \[\K[^\]]+' CHANGELOG.md | head -n1)
           EXTRA_TEXT=$(grep -oP '## \[[^\]]+\] - \(\K[^\)]+' CHANGELOG.md | head -n1)
           CHANGES=$(awk '/## \['$VERSION'\]/{flag=1;next}/## \[/{flag=0}flag' CHANGELOG.md | sed 's/####/\n####/g' | sed '1d' | sed '/^$/N;/^\n$/D')
-          echo "Version detected: $VERSION"
-          echo "Extra text: $EXTRA_TEXT"
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "extra_text=$EXTRA_TEXT" >> $GITHUB_OUTPUT
           echo "changes<<EOF" >> $GITHUB_OUTPUT
@@ -73,7 +63,6 @@ jobs:
         id: previoustag
         run: |
           PREV_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
-          echo "Previous tag: $PREV_TAG"
           echo "tag=$PREV_TAG" >> $GITHUB_OUTPUT
 
       - name: 📝 Generate Commit List
@@ -148,5 +137,4 @@ jobs:
         if: steps.check_version.outputs.should_continue == 'true'
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          # password: ${{ secrets.PYPI_API_TOKEN }}
           verbose: true
