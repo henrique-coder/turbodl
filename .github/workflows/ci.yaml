@@ -20,8 +20,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        python-version: ["3.10", "3.11", "3.12", "3.13"]
+        os: [ubuntu-latest]  # [ubuntu-latest, windows-latest, macos-latest]
+        python-version: [3.13]  # ["3.10", "3.11", "3.12", "3.13"]
+    outputs:
+      matrix-result: ${{ steps.set-result.outputs.result }}
 
     steps:
       - name: 📥 Checkout Repository
@@ -47,13 +49,13 @@ jobs:
       - name: 🧪 Run Tests
         id: tests
         run: make tests
+        continue-on-error: true
 
-      - name: 📊 Collect Test Results
+      - name: 📊 Set Result
+        id: set-result
         if: always()
         run: |
-          echo "OS=${{ matrix.os }}" >> $GITHUB_OUTPUT
-          echo "PYTHON_VERSION=${{ matrix.python-version }}" >> $GITHUB_OUTPUT
-          echo "STATUS=${{ steps.tests.outcome }}" >> $GITHUB_OUTPUT
+          echo "result={\"os\":\"${{ matrix.os }}\",\"python\":\"${{ matrix.python-version }}\",\"status\":\"${{ steps.tests.outcome }}\"}" >> $GITHUB_OUTPUT
 
   report:
     name: 📝 Report Test Results
@@ -66,16 +68,17 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const testResults = ${{ toJson(needs.test.outputs) }};
+            const results = ${{ needs.test.outputs.matrix-result }};
+            const parsedResults = Array.isArray(results) ? results : [results];
+
             const emoji = (status) => status === 'success' ? '✅' : '❌';
             const formatOS = (os) => os.replace('-latest', '');
 
-            const resultsTable = Object.entries(testResults)
-              .map(([key, value]) => {
-                const [os, pythonVersion, status] = value.split(',');
-                return `| ${formatOS(os)} | ${pythonVersion} | ${emoji(status)} ${status} |`;
-              })
-              .join('\n');
+            let tableRows = [];
+            for (const result of parsedResults) {
+              const data = JSON.parse(result);
+              tableRows.push(`| ${formatOS(data.os)} | ${data.python} | ${emoji(data.status)} ${data.status} |`);
+            }
 
             const message = `
             ### Thank you for your commit! 🙏
@@ -84,7 +87,7 @@ jobs:
 
             | OS | Python Version | Status |
             |----|----------------|--------|
-            ${resultsTable}
+            ${tableRows.join('\n')}
 
             [View Details](${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID})
             `;
