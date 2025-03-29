@@ -55,7 +55,7 @@ jobs:
         with:
           path: |
             ~/.local
-            ${{ env.POETRY_CACHE_DIR }}
+            ${{ github.env.POETRY_CACHE_DIR }}
           key: poetry-${{ runner.os }}-${{ matrix.python-version }}-${{ steps.poetry-version.outputs.version }}-${{ hashFiles('**/poetry.lock') }}
           restore-keys: |
             poetry-${{ runner.os }}-${{ matrix.python-version }}-
