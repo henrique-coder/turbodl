@@ -53,7 +53,7 @@ python = "^3.10"
 httpx = "0.28.1"
 humanfriendly = "10.0"
 psutil = "7.0.0"
-rich = "13.9.4"
+rich = "14.0.0"
 tenacity = "9.0.0"
 typer = "0.15.2"
 
