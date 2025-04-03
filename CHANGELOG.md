@@ -1,5 +1,35 @@
 # Changelog
 
+## [0.5.2] - (Enhanced HTTP Features & Connection Management)
+#### Changed
+- Streamlined HTTP client initialization and enhanced file info fetching logic
+- Updated RemoteFileInfo size type to allow "unknown" and improved URL validation
+- Simplified argument annotations for better code clarity
+- Enhanced documentation for clarity and consistency
+
+#### Added
+- Inactivity timeout option to download command for improved connection management
+- Enhanced timeout configuration for HTTP client with better handling of stalled connections
+- Updated default HTTP headers for improved content negotiation and security
+- Memory optimization feature added through ChunkBuffer's reset_buffer method
+- UnidentifiedFileSizeError exception for more graceful handling of unknown file sizes
+
+#### Fixed
+- Reduced maximum RAM usage constant from 30% to 20% for better system compatibility
+- Enhanced file size input handling in download method
+- Updated installation instructions for clarity
+- Simplified downloader functionality for reliability
+
+#### Dependencies
+- Updated ruff to version 0.11.3
+- Updated rich package to version 14.0.0
+- Updated typing-extensions to version 4.13.0
+- Updated pytest to version 8.3.5
+- Updated typer to version 0.15.2
+- Updated tenacity to version 9.1.2
+- Updated pydantic to version 2.11.1
+- Updated dependencies for anyio and iniconfig
+
 ## [0.5.1] - (Performance Enhancements & Stability Improvements)
 #### Changed
 - Streamlined HTTP client initialization and enhanced file info fetching logic
