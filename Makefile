@@ -1,7 +1,7 @@
 PYTHON ?= python3
 VENV := .venv
 
-.PHONY: setup-venv install lint format tests demo help
+.PHONY: install lint format tests demo help
 .DEFAULT_GOAL := help
 
 install:
