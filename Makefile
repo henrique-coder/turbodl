@@ -10,10 +10,10 @@ ARGS := $(wordlist 2,$(words $(MAKECMDGOALS)),$(MAKECMDGOALS))
 install:
 	@if [ -n "$(strip $(ARGS))" ]; then \
 		echo "Installing with extras: $(ARGS)"; \
-		poetry install --extras "$(ARGS)"; \
+		poetry update --extras "$(ARGS)"; \
 	else \
 		echo "Installing default dependencies (no extras specified)..."; \
-		poetry install; \
+		poetry update; \
 	fi
 
 lint:
