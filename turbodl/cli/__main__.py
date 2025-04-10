@@ -1,17 +1,28 @@
+# Built-in modules
+from sys import exit
+
 # Third-party modules
 from httpx import get
 from rich.console import Console
-from typer import Argument, Exit, Option, Typer
 
 # Local imports
 from turbodl import TurboDL, __version__
 from turbodl.exceptions import TurboDLError
 
 
+console = Console()
+
+try:
+    from typer import Argument, Exit, Option, Typer
+except (ModuleNotFoundError, ImportError):
+    console.print("[red]Error: required dependencies for the CLI are not installed.[/]")
+    console.print("To use the command-line interface, please install the '[bold]cli[/]' extra:")
+    console.print("$ [bold cyan]pip install --upgrade turbodl\[cli][/]")
+    exit(1)
+
 app = Typer(
     no_args_is_help=True, add_completion=False, context_settings={"help_option_names": ["-h", "--help"]}, rich_markup_mode="rich"
 )
-console = Console()
 
 
 def version_callback(value: bool) -> None:
