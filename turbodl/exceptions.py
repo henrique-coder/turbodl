@@ -10,6 +10,12 @@ class DownloadInterruptedError(TurboDLError):
     pass
 
 
+class FFmpegNotFoundError(TurboDLError):
+    """Exception raised when the FFmpeg executable is not found."""
+
+    pass
+
+
 class DownloadError(TurboDLError):
     """Exception raised when an error occurs while downloading a file."""
 
@@ -30,6 +36,12 @@ class InvalidArgumentError(TurboDLError):
 
 class InvalidFileSizeError(TurboDLError):
     """Exception raised when the file size is invalid, such as negative or zero."""
+
+    pass
+
+
+class MergeError(TurboDLError):
+    """Exception raised when an error occurs while merging audio and video streams."""
 
     pass
 

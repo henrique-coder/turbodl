@@ -612,88 +612,62 @@ def generate_chunk_ranges(size_bytes: int, max_connections: int) -> list[tuple[i
 
 def calculate_max_connections(size_bytes: int, connection_speed_mbps: float) -> int:
     """
-    Calculates the optimal number of connections based on file size and connection speed.
+    Calculates an optimized number of connections based primarily on file size, with minimal influence from connection speed.
 
-    Uses a sophisticated algorithm that considers:
-    - File size (bytes)
-    - Connection speed (Mbps)
-    - Estimated latency
-    - Connection overhead
-    - Hardware limitations
+    This function prioritizes higher connection counts, especially for files 100MB and larger, to maximize potential throughput. Connection speed has minimal influence on the result to account for variability in server performance.
 
     Args:
-        size_bytes: File size in bytes
-        connection_speed_mbps: Connection speed in Mbps
+        size_bytes: File size in bytes. Must be >= 0.
+        connection_speed_mbps: Estimated connection speed in Mbps. Must be > 0.
 
     Returns:
-        Optimal number of connections between 2 and 24
+        Optimized number of connections clamped between MIN_CONNECTIONS and MAX_CONNECTIONS.
+
+    Raises:
+        ValueError: If size_bytes is negative or connection_speed_mbps is not positive.
     """
 
-    # Convert to MB for easier calculations
+    if size_bytes < 0:
+        raise ValueError("File size cannot be negative.")
+    if connection_speed_mbps <= 0:
+        return MIN_CONNECTIONS
+
+    # --- Tuning Parameters ---
+    # Weight for logarithmic size contribution (dominates calculation)
+    size_log_weight = 2.5
+    # Quadratic boost factor for large files
+    size_quadratic_boost = 0.3
+    # Minimal weight for speed contribution (de-emphasized)
+    speed_weight = 0.2
+    # Midpoint score where sigmoid output is ~50% of MAX_CONNECTIONS
+    midpoint_score = 5.0
+    # Steepness of the sigmoid curve (controls how quickly connections increase)
+    steepness = 1.0
+    # --- End Tuning Parameters ---
+
+    # 1. Calculate logarithmic score for file size
     size_mb = size_bytes / ONE_MB
+    effective_size_mb = max(0.01, size_mb)  # Floor at 0.01MB to avoid log10(0)
+    size_score = log10(effective_size_mb + 1)
 
-    # Base connection calculation using logarithmic scaling
-    # Formula: base_conn = 2 + α * log₁₀(size_mb + 1)
-    # Where α is a scaling factor that varies by size range
-    if size_mb < 1:
-        # For very small files (< 1MB)
-        # Use minimal connections to avoid overhead
-        base_conn = 2
-    elif size_mb < 10:
-        # For small files (1-10MB)
-        # Logarithmic growth with small coefficient
-        base_conn = 2 + 1.2 * log10(size_mb + 1)
-    elif size_mb < 50:
-        # For medium-small files (10-50MB)
-        base_conn = 4 + 2.0 * log10(size_mb / 10 + 0.5)
-    elif size_mb < 100:
-        # For medium files (50-100MB)
-        base_conn = 6 + 2.5 * log10(size_mb / 50 + 0.7)
-    elif size_mb < 500:
-        # For medium-large files (100-500MB)
-        base_conn = 8 + 3.0 * log10(size_mb / 100 + 0.8)
-    elif size_mb < 1000:
-        # For large files (500MB-1GB)
-        base_conn = 12 + 3.5 * log10(size_mb / 500 + 0.85)
-    elif size_mb < 5000:
-        # For very large files (1GB-5GB)
-        base_conn = 16 + 4.0 * log10(size_mb / 1000 + 0.9)
-    elif size_mb < 10000:
-        # For huge files (5GB-10GB)
-        base_conn = 18 + 4.5 * log10(size_mb / 5000 + 0.95)
-    else:
-        # For massive files (>10GB)
-        # Approach maximum connections with diminishing returns
-        base_conn = 20 + 4.0 * (1 - exp(-size_mb / 20000))
+    # 2. Apply a quadratic boost for larger files
+    quadratic_boost = size_quadratic_boost * (size_score**2)
 
-    # Connection speed adjustment using sigmoid function
-    # Formula: speed_factor = 1 + β * (1 / (1 + e^(-γ * (speed - δ))))
-    # Where β is the maximum boost, γ controls transition steepness, and δ is the midpoint
-    if connection_speed_mbps < 10:
-        # For very slow connections, reduce connections to avoid overhead
-        speed_factor = 0.8
-    else:
-        # Sigmoid function that scales with connection speed
-        # Normalized to give reasonable values between 0.8 and 1.5
-        sigmoid = 1 / (1 + exp(-0.015 * (min(connection_speed_mbps, 500) - 100)))
-        speed_factor = 0.8 + 0.7 * sigmoid
+    # 3. Minimal contribution from connection speed (logarithmic scaling)
+    effective_speed_mbps = max(1.0, connection_speed_mbps)  # Floor speed at 1 Mbps
+    speed_score = log10(effective_speed_mbps + 1)
 
-    # Apply speed factor to base connections
-    adjusted_conn = base_conn * speed_factor
+    # Combined score (dominated by file size)
+    combined_score = (size_log_weight * size_score) + quadratic_boost + (speed_weight * speed_score)
 
-    # Apply fine-tuning adjustments for specific size/speed combinations
-    if size_mb < 5 and connection_speed_mbps > 100:
-        # Small files on fast connections don't benefit from many connections
-        adjusted_conn = min(adjusted_conn, 4 + size_mb / 2)
-    elif size_mb > 1000 and connection_speed_mbps < 20:
-        # Large files on slow connections need more connections to maintain progress
-        adjusted_conn = min(adjusted_conn * 1.2, MAX_CONNECTIONS)
-    elif size_mb > 5000 and connection_speed_mbps > 300:
-        # Very large files on very fast connections benefit from more connections but with diminishing returns beyond a certain point
-        adjusted_conn = min(adjusted_conn * 1.1, MAX_CONNECTIONS)
+    # 4. Map combined score to [MIN_CONNECTIONS, MAX_CONNECTIONS] using a sigmoid function
+    connection_range = MAX_CONNECTIONS - MIN_CONNECTIONS
+    sigmoid_factor = 1 / (1 + exp(-steepness * (combined_score - midpoint_score)))
+    calculated_connections = MIN_CONNECTIONS + connection_range * sigmoid_factor
 
-    # Apply minimum and maximum limits with rounding
-    final_connections = max(MIN_CONNECTIONS, min(MAX_CONNECTIONS, round(adjusted_conn)))
+    # Round to nearest integer and clamp within bounds
+    final_connections = round(calculated_connections)
+    final_connections = max(MIN_CONNECTIONS, min(MAX_CONNECTIONS, final_connections))
 
     return final_connections
 
