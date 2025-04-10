@@ -8,12 +8,13 @@ ARGS := $(wordlist 2,$(words $(MAKECMDGOALS)),$(MAKECMDGOALS))
 .DEFAULT_GOAL := help
 
 install:
+	poetry update
 	@if [ -n "$(strip $(ARGS))" ]; then \
 		echo "Installing with extras: $(ARGS)"; \
-		poetry update --extras "$(ARGS)"; \
+		poetry install --extras "$(ARGS)"; \
 	else \
 		echo "Installing default dependencies (no extras specified)..."; \
-		poetry update; \
+		poetry install; \
 	fi
 
 lint:
