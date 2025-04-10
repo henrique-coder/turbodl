@@ -11,11 +11,13 @@ from httpx import Client
 from humanfriendly import InvalidSize, format_size, parse_size
 from rich.console import Console
 from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn
+from streamsnapper import YouTube, YouTubeExtractor
 
 # Local imports
 from .buffers import ChunkBuffer
 from .downloaders import download_with_buffer, download_without_buffer
 from .exceptions import DownloadInterruptedError, InvalidArgumentError, NotEnoughSpaceError, UnidentifiedFileSizeError
+from .merger import Merger
 from .utils import (
     CustomDownloadColumn,
     CustomSpeedColumn,
@@ -107,61 +109,19 @@ class TurboDL:
         if hasattr(self, "_http_client"):
             self._http_client.close()
 
-    def download(
+    def _download_single_file(
         self,
         url: str,
-        output_path: str | PathLike | None = None,
-        pre_allocate_space: bool = False,
-        enable_ram_buffer: bool | Literal["auto"] = "auto",
-        overwrite: bool = True,
-        headers: dict[str, str] | None = None,
-        inactivity_timeout: int | None = 120,
-        timeout: int | None = None,
-        expected_hash: str | None = None,
-        hash_type: Literal[
-            "md5",
-            "sha1",
-            "sha224",
-            "sha256",
-            "sha384",
-            "sha512",
-            "blake2b",
-            "blake2s",
-            "sha3_224",
-            "sha3_256",
-            "sha3_384",
-            "sha3_512",
-            "shake_128",
-            "shake_256",
-        ] = "md5",
-    ) -> None:
-        """
-        Download a file from the given URL to the specified output path.
-
-        Args:
-            url: The URL of the file to download.
-            output_path: The path to save the downloaded file. If it is a directory, filename is derived from server response. If None, the current working directory is used. Defaults to None.
-            pre_allocate_space: Whether to pre-allocate disk space for the file. Defaults to False.
-            enable_ram_buffer: Use RAM buffer for download. If set to False, the file will be downloaded continuously to disk. If set to True, the file will be downloaded with the help of RAM memory. If set to "auto", the RAM buffer will be disabled if the output path is a RAM directory and enabled otherwise. Defaults to "auto".
-            overwrite: Whether to overwrite the file if it already exists. Defaults to True.
-            headers: A dictionary of headers to include in the request. Defaults to None.
-            inactivity_timeout: Timeout in seconds after the connection is considered idle. None means no timeout. Defaults to 120.
-            timeout: Overall timeout in seconds. None means no timeout. Defaults to None.
-            expected_hash: The expected hash value of the downloaded file. If provided, the file will be verified after download. Defaults to None.
-            hash_type: Hash algorithm to use for verification. Available: md5, sha1, sha224, sha256, sha384, sha512, blake2b, blake2s, sha3_224, sha3_256, sha3_384, sha3_512, shake_128, shake_256. Defaults to "md5".
-        Raises:
-            NotEnoughSpaceError: If there's not enough space to download the file.
-            DownloadInterruptedError: If the download is interrupted by the user.
-        """
-
-        # Set and resolve the output path
-        self._output_path = Path.cwd() if output_path is None else Path(output_path).resolve()
-
-        # Determine if output path is a RAM directory and set RAM buffer flag
-        is_ram_dir = is_ram_directory(self._output_path)
-
-        if enable_ram_buffer == "auto":
-            enable_ram_buffer = not is_ram_dir
+        pre_allocate_space: bool,
+        enable_ram_buffer: bool | Literal["auto"],
+        overwrite: bool,
+        headers: dict[str, str] | None,
+        inactivity_timeout: int | None,
+        timeout: int | None,
+        expected_hash: str | None,
+        hash_type: str,
+    ):
+        """Perform the actual download operation."""
 
         # Fetch file information from the server
         generated_data = fetch_file_info(url, headers, inactivity_timeout, timeout)
@@ -275,9 +235,136 @@ class TurboDL:
 
             raise e
 
-        # Set the output path attribute
-        self.output_path = self._output_path.as_posix()
-
         # Verify the hash of the downloaded file, if provided
         if expected_hash is not None:
             verify_hash(self._output_path, expected_hash, hash_type)
+
+    def download(
+        self,
+        url: str,
+        output_path: str | PathLike | None = None,
+        pre_allocate_space: bool = False,
+        enable_ram_buffer: bool | Literal["auto"] = "auto",
+        overwrite: bool = True,
+        headers: dict[str, str] | None = None,
+        inactivity_timeout: int | None = 120,
+        timeout: int | None = None,
+        expected_hash: str | None = None,
+        hash_type: Literal[
+            "md5",
+            "sha1",
+            "sha224",
+            "sha256",
+            "sha384",
+            "sha512",
+            "blake2b",
+            "blake2s",
+            "sha3_224",
+            "sha3_256",
+            "sha3_384",
+            "sha3_512",
+            "shake_128",
+            "shake_256",
+        ] = "md5",
+    ) -> None:
+        """
+        Download a file from the given URL to the specified output path.
+
+        Args:
+            url: The URL of the file to download.
+            output_path: The path to save the downloaded file. If it is a directory, filename is derived from server response. If None, the current working directory is used. Defaults to None.
+            pre_allocate_space: Whether to pre-allocate disk space for the file. Defaults to False.
+            enable_ram_buffer: Use RAM buffer for download. If set to False, the file will be downloaded continuously to disk. If set to True, the file will be downloaded with the help of RAM memory. If set to "auto", the RAM buffer will be disabled if the output path is a RAM directory and enabled otherwise. Defaults to "auto".
+            overwrite: Whether to overwrite the file if it already exists. Defaults to True.
+            headers: A dictionary of headers to include in the request. Defaults to None.
+            inactivity_timeout: Timeout in seconds after the connection is considered idle. None means no timeout. Defaults to 120.
+            timeout: Overall timeout in seconds. None means no timeout. Defaults to None.
+            expected_hash: The expected hash value of the downloaded file. If provided, the file will be verified after download. Defaults to None.
+            hash_type: Hash algorithm to use for verification. Available: md5, sha1, sha224, sha256, sha384, sha512, blake2b, blake2s, sha3_224, sha3_256, sha3_384, sha3_512, shake_128, shake_256. Defaults to "md5".
+        Raises:
+            NotEnoughSpaceError: If there's not enough space to download the file.
+            DownloadInterruptedError: If the download is interrupted by the user.
+        """
+
+        # Set and resolve the output path
+        self._output_path = Path.cwd() if output_path is None else Path(output_path).resolve()
+
+        # Determine if output path is a RAM directory and set RAM buffer flag
+        is_ram_dir = is_ram_directory(self._output_path)
+
+        if enable_ram_buffer == "auto":
+            enable_ram_buffer = not is_ram_dir
+
+        # Check if the URL is a YouTube video
+        youtube_extractor = YouTubeExtractor()
+        video_id = youtube_extractor.extract_video_id(url)
+
+        if video_id:
+            youtube = YouTube(logging=False)
+            youtube.extract(url=f"https://www.youtube.com/watch?v={video_id}")
+            youtube.analyze_information(check_thumbnails=False, retrieve_dislike_count=False)
+            youtube.analyze_video_streams(preferred_quality="all")
+            youtube.analyze_audio_streams(preferred_language="local")
+
+            self._download_single_file(
+                youtube.best_video_download_url,
+                pre_allocate_space,
+                enable_ram_buffer,
+                False,
+                headers,
+                inactivity_timeout,
+                timeout,
+                expected_hash,
+                hash_type,
+            )
+            temporary_video_path = self._output_path
+
+            self._download_single_file(
+                youtube.best_audio_download_url,
+                pre_allocate_space,
+                enable_ram_buffer,
+                False,
+                headers,
+                inactivity_timeout,
+                timeout,
+                expected_hash,
+                hash_type,
+            )
+            temporary_audio_path = self._output_path
+
+            # Merge audio and video streams
+            output_merged_path = self._output_path.with_name(youtube.information.cleanTitle).with_suffix(
+                temporary_video_path.suffix if temporary_video_path.suffix else ".mp4"
+            )
+
+            merger = Merger(logging=False)
+            merger.merge(
+                video_path=temporary_video_path,
+                audio_path=temporary_audio_path,
+                output_path=output_merged_path,
+                ffmpeg_path="local",
+            )
+
+            temporary_video_path.unlink(missing_ok=True)
+            temporary_audio_path.unlink(missing_ok=True)
+
+            # Set the output path attribute
+            self.output_path = output_merged_path.as_posix()
+
+            # Show success message
+            self._console.print(f"[green]Successfully downloaded [bold]{youtube.information.title}[/] from YouTube[/]")
+        else:
+            self._download_single_file(
+                url,
+                pre_allocate_space,
+                enable_ram_buffer,
+                overwrite,
+                headers,
+                inactivity_timeout,
+                timeout,
+                expected_hash,
+                hash_type,
+            )
+
+            # Set the output path attribute
+            self.output_path = self._output_path.as_posix()
