@@ -314,7 +314,7 @@ class TurboDL:
                 headers,
                 inactivity_timeout,
                 timeout,
-                expected_hash,
+                None,
                 hash_type,
             )
             temporary_video_path = self._output_path
@@ -327,7 +327,7 @@ class TurboDL:
                 headers,
                 inactivity_timeout,
                 timeout,
-                expected_hash,
+                None,
                 hash_type,
             )
             temporary_audio_path = self._output_path
