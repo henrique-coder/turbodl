@@ -54,8 +54,14 @@ httpx = "^0.28.1"
 humanfriendly = "^10.0"
 psutil = "^7.0.0"
 rich = "^14.0.0"
+streamsnapper = { git = "https://github.com/henrique-coder/streamsnapper.git", branch = "main", optional = true }
 tenacity = "^9.1.2"
-typer = "^0.15.2"
+typer = { version = "^0.15.2", optional = true }
+
+[tool.poetry.extras]
+cli = ["typer"]
+youtube = ["streamsnapper"]
+all = ["streamsnapper", "typer"]
 
 [tool.poetry.group.lint.dependencies]
 ruff = "^0.11.4"
