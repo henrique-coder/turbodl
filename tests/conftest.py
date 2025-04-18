@@ -6,7 +6,7 @@ from tempfile import TemporaryDirectory
 # Third-party modules
 from pytest import fixture
 
-# Local imports
+# Local modules
 from turbodl import TurboDL
 
 

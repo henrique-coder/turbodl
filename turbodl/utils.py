@@ -32,7 +32,7 @@ from rich.progress import DownloadColumn, ProgressColumn, Task, TransferSpeedCol
 from rich.text import Text
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 
-# Local imports
+# Local modules
 from .constants import (
     DEFAULT_HEADERS,
     MAX_CHUNK_SIZE,

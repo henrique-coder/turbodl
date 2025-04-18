@@ -1,7 +1,7 @@
 # Standard modules
 from importlib.metadata import version
 
-# Local imports
+# Local modules
 from .core import TurboDL
 from .exceptions import (
     DownloadError,

@@ -4,7 +4,7 @@ from pathlib import Path
 # Third-party modules
 from pytest import mark, raises
 
-# Local imports
+# Local modules
 from turbodl import TurboDL
 from turbodl.exceptions import TurboDLError
 
