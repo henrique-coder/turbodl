@@ -1,4 +1,4 @@
-PYTHON ?= python3
+PYTHON ?= python
 VENV := .venv
 
 FIRST_TARGET := $(firstword $(MAKECMDGOALS))
