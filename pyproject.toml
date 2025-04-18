@@ -62,7 +62,7 @@ typer = { version = "^0.15.2", optional = true }
 cli = ["typer"]
 
 [tool.poetry.group.lint.dependencies]
-ruff = "^0.11.4"
+ruff = "^0.11.6"
 
 [tool.poetry.group.test.dependencies]
 pytest = "^8.3.5"
