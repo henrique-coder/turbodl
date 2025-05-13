@@ -13,7 +13,7 @@ from rich.console import Console
 from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn
 from streamsnapper import YouTube, YouTubeExtractor
 
-# Local imports
+# Local modules
 from .buffers import ChunkBuffer
 from .downloaders import download_with_buffer, download_without_buffer
 from .exceptions import DownloadInterruptedError, InvalidArgumentError, NotEnoughSpaceError, UnidentifiedFileSizeError
@@ -314,7 +314,7 @@ class TurboDL:
                 headers,
                 inactivity_timeout,
                 timeout,
-                expected_hash,
+                None,
                 hash_type,
             )
             temporary_video_path = self._output_path
@@ -327,7 +327,7 @@ class TurboDL:
                 headers,
                 inactivity_timeout,
                 timeout,
-                expected_hash,
+                None,
                 hash_type,
             )
             temporary_audio_path = self._output_path

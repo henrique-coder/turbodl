@@ -10,7 +10,7 @@ from threading import Lock
 from httpx import Client
 from rich.progress import Progress, TaskID
 
-# Local imports
+# Local modules
 from .buffers import ChunkBuffer
 from .utils import download_retry_decorator
 

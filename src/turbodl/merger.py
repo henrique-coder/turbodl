@@ -5,7 +5,7 @@ from shutil import which
 from subprocess import DEVNULL, CalledProcessError, run
 from typing import Literal
 
-# Local imports
+# Local modules
 from .exceptions import FFmpegNotFoundError, MergeError
 
 

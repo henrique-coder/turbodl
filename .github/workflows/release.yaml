@@ -38,7 +38,7 @@ jobs:
         run: |
           VERSION=$(grep -oP '## \[\K[^\]]+' CHANGELOG.md | head -n1)
           EXTRA_TEXT=$(grep -oP '## \[[^\]]+\] - \(\K[^\)]+' CHANGELOG.md | head -n1)
-          CHANGES=$(awk '/## \['$VERSION'\]/{flag=1;next}/## \[/{flag=0}flag' CHANGELOG.md | sed 's/####/\n####/g' | sed '1d' | sed '/^$/N;/^\n$/D')
+          CHANGES=$(awk '/## \['"$VERSION"'\]/{flag=1;next}/## \[/{flag=0}flag' CHANGELOG.md | sed 's/####/\n####/g' | sed '1d' | sed '/^$/N;/^\n$/D' | sed '/^\s*$/d')
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "extra_text=$EXTRA_TEXT" >> $GITHUB_OUTPUT
           echo "changes<<EOF" >> $GITHUB_OUTPUT

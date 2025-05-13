@@ -28,53 +28,20 @@ jobs:
           fetch-depth: 0
 
       - name: 🐍 Setup Python
-        id: setup-python
+        id: setup_python
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-          cache: pip
           check-latest: true
 
-      - name: Set Poetry cache directory (Windows)
-        if: runner.os == 'Windows'
-        run: echo "POETRY_CACHE_DIR=$env:LOCALAPPDATA\pypoetry\Cache" >> $env:GITHUB_ENV
+      - name: 🏗️ Setup UV
+        uses: astral-sh/setup-uv@v6
 
-      - name: Set Poetry cache directory (Unix)
-        if: runner.os != 'Windows'
-        run: echo "POETRY_CACHE_DIR=$HOME/.cache/pypoetry" >> $GITHUB_ENV
+      - name: 🛠️ Create Virtual Environment
+        run: uv venv .venv --python ${{ steps.setup_python.outputs.python-path }}
 
-      - name: 🔧 Install Poetry
-        id: poetry-version
-        run: |
-          python -m pip install --upgrade pip
-          pip install --upgrade poetry
-          echo "version=$(poetry --version | cut -d' ' -f3)" >> $GITHUB_OUTPUT
-
-      - name: 📦 Cache Poetry installation
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.local
-            ${{ github.env.POETRY_CACHE_DIR }}
-          key: poetry-${{ runner.os }}-${{ matrix.python-version }}-${{ steps.poetry-version.outputs.version }}-${{ hashFiles('**/poetry.lock') }}
-          restore-keys: |
-            poetry-${{ runner.os }}-${{ matrix.python-version }}-
-
-
-      - name: 📚 Configure Poetry
-        run: poetry config virtualenvs.in-project true
-
-      - name: 📦 Cache virtual environment
-        uses: actions/cache@v4
-        with:
-          path: .venv
-          key: venv-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('**/poetry.lock') }}
-          restore-keys: |
-            venv-${{ runner.os }}-${{ matrix.python-version }}-
-
-      - name: 📚 Install Dependencies
-        run: poetry install --with test --no-interaction
+      - name: 📦 Install Dependencies
+        run: uv sync --group test
 
       - name: 🧪 Run Tests
-        id: tests
-        run: make tests
+        run: uv run make tests

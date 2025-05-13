@@ -4,9 +4,9 @@ from pathlib import Path
 # Third-party modules
 from pytest import mark, raises
 
-# Local imports
-from turbodl import TurboDL
-from turbodl.exceptions import TurboDLError
+# Local modules
+from src.turbodl import TurboDL
+from src.turbodl.exceptions import TurboDLError
 
 
 TEST_FILES = [
