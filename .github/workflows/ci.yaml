@@ -28,20 +28,20 @@ jobs:
           fetch-depth: 0
 
       - name: 🐍 Setup Python
+        id: setup_python
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-          cache: "pip"
           check-latest: true
 
       - name: 🏗️ Setup UV
         uses: astral-sh/setup-uv@v6
 
-      - name: 🛠️ Create Virtual Environment with UV
-        run: uv venv .venv --python ${{ matrix.python-version }}
+      - name: 🛠️ Create Virtual Environment
+        run: uv venv .venv --python ${{ steps.setup_python.outputs.python-path }}
 
-      - name: 📦 Install Dependencies with UV
+      - name: 📦 Install Dependencies
         run: uv sync --group test
 
       - name: 🧪 Run Tests
-        run: make tests
+        run: uv run make tests
