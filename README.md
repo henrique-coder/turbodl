@@ -21,10 +21,14 @@ TurboDL is an extremely smart, fast, and efficient download manager designed to 
 - **Real-time Feedback**: Provides an elegant, accurate progress bar with detailed statistics
 - **Cross-platform Compatibility**: Works consistently across all major operating systems
 
+### Additional Built-in Features
+
+- **YouTube Support**: Download YouTube videos in the highest available quality and automatically merge audio and video streams using [StreamSnapper](https://github.com/henrique-coder/streamsnapper) library
+
 ## 📦 Installation
 
 ```bash
-# Install the stable version of TurboDL from PyPI (recommended)
+# Install the stable version of TurboDL from PyPI
 pip install --upgrade turbodl
 # Or with the CLI interface
 pip install --upgrade turbodl[cli]
@@ -104,26 +108,26 @@ turbodl download [...] https://example.com/file.txt path/to/file
 
 ### `TurboDL` Class Parameters
 
-| Parameter | Type | Default | Description |
-| - | - | - | - |
-| `max_connections` | int, Literal["auto"] | "auto" | Maximum connections for parallel downloading. Minimum is 1 and maximum is 32. |
-| `connection_speed_mbps` | float | 100 | Your current internet connection speed in Mbps. |
-| `show_progress_bar` | bool | True | Whether to display a progress bar. |
+| Parameter               | Type                 | Default | Description                                                                   |
+| ----------------------- | -------------------- | ------- | ----------------------------------------------------------------------------- |
+| `max_connections`       | int, Literal["auto"] | "auto"  | Maximum connections for parallel downloading. Minimum is 1 and maximum is 32. |
+| `connection_speed_mbps` | float                | 100     | Your current internet connection speed in Mbps.                               |
+| `show_progress_bar`     | bool                 | True    | Whether to display a progress bar.                                            |
 
 ### `Download` Method Parameters
 
-| Parameter | Type | Default | Description |
-| - | - | - | - |
-| `url` | str | - | The URL of the file to download. |
-| `output_path` | str, PathLike, None | None | The path to save the downloaded file. If it is a directory, filename is derived from server response. If None, the current working directory is used. |
-| `pre_allocate_space` | bool | False | Whether to pre-allocate disk space for the file. |
-| `use_ram_buffer` | bool, Literal["auto"] | "auto" | Use RAM buffer for download. If set to False, the file will be downloaded continuously to disk. If set to True, the file will be downloaded with the help of RAM memory. If set to "auto", the RAM buffer will be disabled if the output path is a RAM directory and enabled otherwise. |
-| `overwrite` | bool | True | Whether to overwrite the file if it already exists. |
-| `headers` | dict[str, str], None | None | A dictionary of headers to include in the request. |
-| `inactivity_timeout` | int | 120 | Timeout in seconds after the connection is considered idle. None means no timeout. |
-| `timeout` | int | None | Overall timeout in seconds. None means no timeout. |
-| `expected_hash` | str, None | None | The expected hash value of the downloaded file. If provided, the file will be verified after download. |
-| `hash_type` | Literal["md5", "sha1", "sha224", "sha256", "sha384", "sha512", "blake2b", "blake2s", "sha3_224", "sha3_256", "sha3_384", "sha3_512", "shake_128", "shake_256"] | "md5" | Hash algorithm to use for verification. Available: md5, sha1, sha224, sha256, sha384, sha512, blake2b, blake2s, sha3_224, sha3_256, sha3_384, sha3_512, shake_128, shake_256. |
+| Parameter            | Type                                                                                                                                                           | Default | Description                                                                                                                                                                                                                                                                             |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `url`                | str                                                                                                                                                            | -       | The URL of the file to download.                                                                                                                                                                                                                                                        |
+| `output_path`        | str, PathLike, None                                                                                                                                            | None    | The path to save the downloaded file. If it is a directory, filename is derived from server response. If None, the current working directory is used.                                                                                                                                   |
+| `pre_allocate_space` | bool                                                                                                                                                           | False   | Whether to pre-allocate disk space for the file.                                                                                                                                                                                                                                        |
+| `use_ram_buffer`     | bool, Literal["auto"]                                                                                                                                          | "auto"  | Use RAM buffer for download. If set to False, the file will be downloaded continuously to disk. If set to True, the file will be downloaded with the help of RAM memory. If set to "auto", the RAM buffer will be disabled if the output path is a RAM directory and enabled otherwise. |
+| `overwrite`          | bool                                                                                                                                                           | True    | Whether to overwrite the file if it already exists.                                                                                                                                                                                                                                     |
+| `headers`            | dict[str, str], None                                                                                                                                           | None    | A dictionary of headers to include in the request.                                                                                                                                                                                                                                      |
+| `inactivity_timeout` | int                                                                                                                                                            | 120     | Timeout in seconds after the connection is considered idle. None means no timeout.                                                                                                                                                                                                      |
+| `timeout`            | int                                                                                                                                                            | None    | Overall timeout in seconds. None means no timeout.                                                                                                                                                                                                                                      |
+| `expected_hash`      | str, None                                                                                                                                                      | None    | The expected hash value of the downloaded file. If provided, the file will be verified after download.                                                                                                                                                                                  |
+| `hash_type`          | Literal["md5", "sha1", "sha224", "sha256", "sha384", "sha512", "blake2b", "blake2s", "sha3_224", "sha3_256", "sha3_384", "sha3_512", "shake_128", "shake_256"] | "md5"   | Hash algorithm to use for verification. Available: md5, sha1, sha224, sha256, sha384, sha512, blake2b, blake2s, sha3_224, sha3_256, sha3_384, sha3_512, shake_128, shake_256.                                                                                                           |
 
 ## 🛠️ Development
 
