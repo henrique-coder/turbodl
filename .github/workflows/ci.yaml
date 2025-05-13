@@ -35,7 +35,7 @@ jobs:
           check-latest: true
 
       - name: 🏗️ Setup UV
-        uses: astral-sh/setup-uv@v1
+        uses: astral-sh/setup-uv@v6
 
       - name: 🛠️ Create Virtual Environment with UV
         run: uv venv .venv --python ${{ matrix.python-version }}
