@@ -8,20 +8,16 @@ ARGS := $(wordlist 2,$(words $(MAKECMDGOALS)),$(MAKECMDGOALS))
 .DEFAULT_GOAL := help
 
 install:
-	poetry update
-	@if [ -n "$(strip $(ARGS))" ]; then \
-		echo "Installing with extras: $(ARGS)"; \
-		poetry install --extras "$(ARGS)"; \
-	else \
-		echo "Installing default dependencies (no extras specified)..."; \
-		poetry install; \
-	fi
+	uv sync --all-extras --all-groups
 
 lint:
-	poetry run ruff check
+	npx prettier --check "**/*.{html,css,js,md}"
+	ruff check .
 
 format:
-	poetry run ruff format
+	npx prettier --write "**/*.{html,css,js,md}"
+	ruff check --fix .
+	ruff format .
 
 tests:
 	poetry run pytest -v --xfail-tb
@@ -34,14 +30,12 @@ demo:
 
 help:
 	@echo "Available commands:"
-	@echo "  install     - Update dependencies, poetry.lock file, and install project."
-	@echo "                Optional extras can be listed after 'install'."
-	@echo "                Example: make install extra1 extra2"
-	@echo "  lint        - Check code with ruff"
-	@echo "  format      - Format code with ruff"
-	@echo "  tests       - Run tests with pytest"
-	@echo "  demo        - Generate a gif demonstrating the TurboDL CLI functionality..."
-	@echo "  help        - Show this help message"
+	@echo "  install    - Install dependencies"
+	@echo "  lint       - Check code with ruff"
+	@echo "  format     - Format code with ruff"
+	@echo "  tests      - Run tests with pytest"
+	@echo "  demo       - Generate a gif demonstrating the TurboDL CLI functionality..."
+	@echo "  help       - Show this help message"
 
 %:
 	@if [ "$(FIRST_TARGET)" = "install" ]; then \
