@@ -44,4 +44,4 @@ jobs:
         run: uv sync --group test
 
       - name: 🧪 Run Tests
-        run: uv run make tests
+        run: make tests
