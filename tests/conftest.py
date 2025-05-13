@@ -1,5 +1,6 @@
 # Standard modules
 from collections.abc import Generator
+from os import getenv
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
@@ -7,14 +8,14 @@ from tempfile import TemporaryDirectory
 from pytest import fixture
 
 # Local modules
-from turbodl import TurboDL
+from src.turbodl import TurboDL
 
 
 @fixture
 def downloader() -> TurboDL:
     """Return a configured TurboDL instance."""
 
-    return TurboDL(connection_speed_mbps=1000)
+    return TurboDL(connection_speed_mbps=1000 if getenv("GITHUB_ACTIONS") in ("true", "1") else 700)
 
 
 @fixture

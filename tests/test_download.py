@@ -5,8 +5,8 @@ from pathlib import Path
 from pytest import mark, raises
 
 # Local modules
-from turbodl import TurboDL
-from turbodl.exceptions import TurboDLError
+from src.turbodl import TurboDL
+from src.turbodl.exceptions import TurboDLError
 
 
 TEST_FILES = [
