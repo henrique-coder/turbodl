@@ -60,7 +60,6 @@ jobs:
           restore-keys: |
             poetry-${{ runner.os }}-${{ matrix.python-version }}-
 
-
       - name: 📚 Configure Poetry
         run: poetry config virtualenvs.in-project true
 
