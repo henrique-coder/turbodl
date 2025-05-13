@@ -11,11 +11,11 @@ install:
 	uv sync --all-extras --all-groups
 
 lint:
-	npx prettier --check "**/*.{html,css,js,md}"
+	npx prettier --check "**/*.{html,css,js,md,json,yaml}"
 	ruff check .
 
 format:
-	npx prettier --write "**/*.{html,css,js,md}"
+	npx prettier --write "**/*.{html,css,js,md,json,yaml}"
 	ruff check --fix .
 	ruff format .
 
