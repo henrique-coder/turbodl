@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.6.2] - (Critical CLI Resolution & Python Versioning Update)
+
+#### Changed
+
+- CI Python test matrix adjusted to support versions 3.10 through 3.13
+- CI workflow steps and environment variable handling improved for clarity
+- Version constraints for Typer and development dependencies loosened for flexibility
+- Release job timeout in CI workflow reduced for security and stability
+
+#### Fixed
+
+- Critical CLI operational issues resolved by correcting Pydantic dependency version and configuration
+
 ## [0.6.1] - (CLI Stability & Python 3.14 Support)
 
 #### Added

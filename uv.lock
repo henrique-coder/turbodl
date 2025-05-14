@@ -569,7 +569,7 @@ wheels = [
 
 [[package]]
 name = "turbodl"
-version = "0.6.1"
+version = "0.6.2"
 source = { editable = "." }
 dependencies = [
     { name = "httpx" },
@@ -601,22 +601,22 @@ test = [
 [package.metadata]
 requires-dist = [
     { name = "click", marker = "extra == 'cli'", specifier = "==8.1.8" },
-    { name = "httpx", specifier = ">=0.28.1" },
-    { name = "humanfriendly", specifier = ">=10.0" },
-    { name = "psutil", specifier = ">=7.0.0" },
-    { name = "rich", specifier = ">=14.0.0" },
+    { name = "httpx" },
+    { name = "humanfriendly" },
+    { name = "psutil" },
+    { name = "rich" },
     { name = "streamsnapper", git = "https://github.com/henrique-coder/streamsnapper.git" },
-    { name = "tenacity", specifier = ">=9.1.2" },
-    { name = "typer", marker = "extra == 'cli'", specifier = ">=0.15.3" },
+    { name = "tenacity" },
+    { name = "typer", marker = "extra == 'cli'" },
 ]
 provides-extras = ["cli"]
 
 [package.metadata.requires-dev]
-dev = [{ name = "fastapi", specifier = ">=0.115.12" }]
-lint = [{ name = "ruff", specifier = ">=0.11.9" }]
+dev = [{ name = "fastapi" }]
+lint = [{ name = "ruff" }]
 test = [
-    { name = "pytest", specifier = ">=8.3.5" },
-    { name = "pytest-randomly", specifier = ">=3.16.0" },
+    { name = "pytest" },
+    { name = "pytest-randomly" },
 ]
 
 [[package]]

@@ -19,7 +19,7 @@ jobs:
       fail-fast: false
       matrix:
         os: ["ubuntu-latest", "windows-latest", "macos-latest"]
-        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14-dev"]
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
 
     steps:
       - name: 📥 Checkout Repository
@@ -37,11 +37,16 @@ jobs:
       - name: 🏗️ Setup UV
         uses: astral-sh/setup-uv@v6
 
-      - name: 🛠️ Create Virtual Environment
+      - name: 🛠️ Create Virtual Environment with UV using specific Python
         run: uv venv .venv --python ${{ steps.setup_python.outputs.python-path }}
 
-      - name: 📦 Install Dependencies
+      - name: 📦 Install Dependencies with UV using specific Python for resolution
         run: uv sync --group test
+        env:
+          UV_PYTHON: ${{ steps.setup_python.outputs.python-path }}
 
       - name: 🧪 Run Tests
         run: uv run make tests
+
+        env:
+          UV_PYTHON: ${{ steps.setup_python.outputs.python-path }}
