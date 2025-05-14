@@ -18,8 +18,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: ["ubuntu-latest"]  # ["ubuntu-latest", "windows-latest", "macos-latest"]
-        python-version: ["3.13", "3.14-dev"]  # ["3.10", "3.11", "3.12", "3.13", "3.14-dev"]  # Don't delete this line, it's used for testing the workflow
+        os: ["ubuntu-latest"] # ["ubuntu-latest", "windows-latest", "macos-latest"]
+        python-version: ["3.13", "3.14-dev"] # ["3.10", "3.11", "3.12", "3.13", "3.14-dev"]  # Don't delete this line, it's used for testing the workflow
 
     steps:
       - name: 📥 Checkout Repository
@@ -44,9 +44,11 @@ jobs:
         run: uv sync --group test
         env:
           UV_PYTHON: ${{ steps.setup_python.outputs.python-path }}
+          PYO3_USE_ABI3_FORWARD_COMPATIBILITY: 1
 
       - name: 🧪 Run Tests
         run: uv run make tests
 
         env:
           UV_PYTHON: ${{ steps.setup_python.outputs.python-path }}
+          PYO3_USE_ABI3_FORWARD_COMPATIBILITY: 1
