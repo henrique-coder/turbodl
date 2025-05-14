@@ -18,8 +18,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: ["ubuntu-latest", "windows-latest", "macos-latest"]
-        python-version: ["3.14-dev"]  # ["3.10", "3.11", "3.12", "3.13", "3.14-dev"]
+        os: ["ubuntu-latest"]  # ["ubuntu-latest", "windows-latest", "macos-latest"]
+        python-version: ["3.13", "3.14-dev"]  # ["3.10", "3.11", "3.12", "3.13", "3.14-dev"]  # Don't delete this line, it's used for testing the workflow
 
     steps:
       - name: 📥 Checkout Repository
