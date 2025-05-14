@@ -38,6 +38,7 @@ classifiers = [
 ]
 requires-python = ">=3.10"
 dependencies = [
+    "click>=8.1.8",
     "httpx",
     "humanfriendly",
     "psutil",
@@ -51,7 +52,6 @@ streamsnapper = { git = "https://github.com/henrique-coder/streamsnapper.git" }
 
 [project.optional-dependencies]
 cli = [
-  "click==8.1.8",
   "typer",
 ]
 

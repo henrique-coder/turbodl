@@ -572,6 +572,7 @@ name = "turbodl"
 version = "0.6.2"
 source = { editable = "." }
 dependencies = [
+    { name = "click" },
     { name = "httpx" },
     { name = "humanfriendly" },
     { name = "psutil" },
@@ -582,7 +583,6 @@ dependencies = [
 
 [package.optional-dependencies]
 cli = [
-    { name = "click" },
     { name = "typer" },
 ]
 
@@ -600,7 +600,7 @@ test = [
 
 [package.metadata]
 requires-dist = [
-    { name = "click", marker = "extra == 'cli'", specifier = "==8.1.8" },
+    { name = "click", specifier = ">=8.1.8" },
     { name = "httpx" },
     { name = "humanfriendly" },
     { name = "psutil" },
