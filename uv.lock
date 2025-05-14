@@ -607,7 +607,7 @@ requires-dist = [
     { name = "rich" },
     { name = "streamsnapper", git = "https://github.com/henrique-coder/streamsnapper.git" },
     { name = "tenacity" },
-    { name = "typer", marker = "extra == 'cli'", specifier = "==0.15.3" },
+    { name = "typer", marker = "extra == 'cli'" },
 ]
 provides-extras = ["cli"]
 
