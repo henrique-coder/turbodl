@@ -601,13 +601,13 @@ test = [
 [package.metadata]
 requires-dist = [
     { name = "click", marker = "extra == 'cli'", specifier = "==8.1.8" },
-    { name = "httpx", specifier = ">=0.28.1" },
-    { name = "humanfriendly", specifier = ">=10.0" },
-    { name = "psutil", specifier = ">=7.0.0" },
-    { name = "rich", specifier = ">=14.0.0" },
+    { name = "httpx" },
+    { name = "humanfriendly" },
+    { name = "psutil" },
+    { name = "rich" },
     { name = "streamsnapper", git = "https://github.com/henrique-coder/streamsnapper.git" },
-    { name = "tenacity", specifier = ">=9.1.2" },
-    { name = "typer", marker = "extra == 'cli'", specifier = ">=0.15.3" },
+    { name = "tenacity" },
+    { name = "typer", marker = "extra == 'cli'", specifier = "==0.15.3" },
 ]
 provides-extras = ["cli"]
 
