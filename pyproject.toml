@@ -57,14 +57,14 @@ cli = [
 
 [dependency-groups]
 dev = [
-    "fastapi>=0.115.12",
+    "fastapi",
 ]
 lint = [
-    "ruff>=0.11.9",
+    "ruff",
 ]
 test = [
-    "pytest>=8.3.5",
-    "pytest-randomly>=3.16.0",
+    "pytest",
+    "pytest-randomly",
 ]
 
 [project.urls]

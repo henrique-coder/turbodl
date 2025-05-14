@@ -612,11 +612,11 @@ requires-dist = [
 provides-extras = ["cli"]
 
 [package.metadata.requires-dev]
-dev = [{ name = "fastapi", specifier = ">=0.115.12" }]
-lint = [{ name = "ruff", specifier = ">=0.11.9" }]
+dev = [{ name = "fastapi" }]
+lint = [{ name = "ruff" }]
 test = [
-    { name = "pytest", specifier = ">=8.3.5" },
-    { name = "pytest-randomly", specifier = ">=3.16.0" },
+    { name = "pytest" },
+    { name = "pytest-randomly" },
 ]
 
 [[package]]
