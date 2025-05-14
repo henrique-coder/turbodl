@@ -1,6 +1,6 @@
 [project]
 name = "turbodl"
-version = "0.6.0"
+version = "0.6.1"
 description = "TurboDL is an extremely smart, fast, and efficient download manager designed to optimize your downloading experience."
 license = "MIT"
 readme = "README.md"
@@ -51,7 +51,7 @@ streamsnapper = { git = "https://github.com/henrique-coder/streamsnapper.git" }
 
 [project.optional-dependencies]
 cli = [
-  "click<=8.2.0",
+  "click==8.1.8",
   "typer>=0.15.3",
 ]
 
