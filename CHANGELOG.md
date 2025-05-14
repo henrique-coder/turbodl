@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.6.1] - (CLI Stability & Python 3.14 Support)
+
+#### Added
+
+- Support for Python 3.14 development versions in CI test matrix
+- Python 3.14 classifier added to `pyproject.toml` for future compatibility
+
+#### Changed
+
+- CLI demo command updated to use `uv run` for operational consistency
+- Demo GIF and link for CLI updated in documentation with a new version
+
+#### Fixed
+
+- Critical CLI functionality restored by updating `click` dependency to version `8.1.8`
+- Formatting of OS matrix in CI workflow configuration corrected
+
+#### Dependencies
+
+- `click` (transitive via `typer`) updated to version `8.1.8`
+
 ## [0.6.0] - (New YouTube Support, `uv` Migration & Enhancements)
 
 #### Added
