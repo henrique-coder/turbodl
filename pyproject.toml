@@ -51,7 +51,7 @@ streamsnapper = { git = "https://github.com/henrique-coder/streamsnapper.git" }
 
 [project.optional-dependencies]
 cli = [
-  "click<=8.2.0",
+  "click==8.1.8",
   "typer>=0.15.3",
 ]
 
