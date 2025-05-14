@@ -41,6 +41,7 @@ dependencies = [
     "httpx",
     "humanfriendly",
     "psutil",
+    "pydantic>=2.11.4",
     "rich",
     "streamsnapper",
     "tenacity",
