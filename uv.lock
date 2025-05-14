@@ -605,7 +605,7 @@ requires-dist = [
     { name = "httpx" },
     { name = "humanfriendly" },
     { name = "psutil" },
-    { name = "pydantic", specifier = ">=2.11.4" },
+    { name = "pydantic", specifier = ">=2.8.0" },
     { name = "rich" },
     { name = "streamsnapper", git = "https://github.com/henrique-coder/streamsnapper.git" },
     { name = "tenacity" },
