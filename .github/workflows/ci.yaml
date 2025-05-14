@@ -27,17 +27,19 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: 🐍 Setup Python
+      - name: 🐍 Setup Python from actions/setup-python
         id: setup_python
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
           check-latest: true
 
-      - name: 🏗️ Setup UV
+      - name: 🏗️ Setup UV and Set UV_PYTHON
         uses: astral-sh/setup-uv@v6
+        with:
+          python-version: ${{ matrix.python-version }}
 
-      - name: 🛠️ Create Virtual Environment
+      - name: 🛠️ Create Virtual Environment with specific Python
         run: uv venv .venv --python ${{ steps.setup_python.outputs.python-path }}
 
       - name: 📦 Install Dependencies
