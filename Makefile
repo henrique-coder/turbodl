@@ -4,11 +4,8 @@ VENV := .venv
 FIRST_TARGET := $(firstword $(MAKECMDGOALS))
 ARGS := $(wordlist 2,$(words $(MAKECMDGOALS)),$(MAKECMDGOALS))
 
-.PHONY: install lint format tests demo help %
+.PHONY: lint format install tests demo help %
 .DEFAULT_GOAL := help
-
-install:
-	uv sync --all-extras --all-groups
 
 lint:
 	npx prettier --check "**/*.{html,css,js,md,json,yaml}"
@@ -18,6 +15,9 @@ format:
 	npx prettier --write "**/*.{html,css,js,md,json,yaml}"
 	ruff check --fix .
 	ruff format .
+
+install:
+	uv sync --all-extras --all-groups
 
 tests:
 	uv run pytest -v --xfail-tb
@@ -30,9 +30,9 @@ demo:
 
 help:
 	@echo "Available commands:"
-	@echo "  install    - Install dependencies"
 	@echo "  lint       - Check code with ruff"
 	@echo "  format     - Format code with ruff"
+	@echo "  install    - Install dependencies"
 	@echo "  tests      - Run tests with pytest"
 	@echo "  demo       - Generate a gif demonstrating the TurboDL CLI functionality"
 	@echo "  help       - Show this help message"
