@@ -600,7 +600,7 @@ test = [
 
 [package.metadata]
 requires-dist = [
-    { name = "click", specifier = ">=8.1.8" },
+    { name = "click", specifier = "==8.1.8" },
     { name = "httpx" },
     { name = "humanfriendly" },
     { name = "psutil" },
