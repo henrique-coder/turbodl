@@ -1,3 +1,7 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
 [project]
 name = "turbodl"
 version = "0.6.2"
@@ -39,12 +43,12 @@ classifiers = [
 requires-python = ">=3.10"
 dependencies = [
     "click==8.1.8",
-    "httpx",
-    "humanfriendly",
-    "psutil",
-    "rich",
-    "streamsnapper",
-    "tenacity",
+    "httpx>=0.28.1",
+    "humanfriendly>=10.0",
+    "psutil>=7.0.0",
+    "rich>=14.0.0",
+    "streamsnapper>=0.3.0",
+    "tenacity>=9.1.2",
 ]
 
 [tool.uv.sources]
@@ -52,19 +56,19 @@ streamsnapper = { git = "https://github.com/henrique-coder/streamsnapper.git" }
 
 [project.optional-dependencies]
 cli = [
-  "typer",
+  "typer>=0.15.4",
 ]
 
 [dependency-groups]
-dev = [
-    "fastapi",
-]
 lint = [
-    "ruff",
+    "ruff>=0.11.11",
 ]
 test = [
-    "pytest",
-    "pytest-randomly",
+    "pytest>=8.3.5",
+    "pytest-randomly>=3.16.0",
+]
+dev = [
+    "fastapi>=0.115.12",
 ]
 
 [project.urls]
@@ -81,7 +85,3 @@ python_functions = ["test_*"]
 
 [project.scripts]
 turbodl = "turbodl.cli.__main__:app"
-
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
