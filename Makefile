@@ -8,13 +8,13 @@ ARGS := $(wordlist 2,$(words $(MAKECMDGOALS)),$(MAKECMDGOALS))
 .DEFAULT_GOAL := help
 
 lint:
-	npx prettier --check "**/*.{html,css,js,md,json,yaml}"
-	ruff check .
+	uv run npx prettier --check "**/*.{html,css,js,md,json,yaml}"
+	uv run ruff check .
 
 format:
-	npx prettier --write "**/*.{html,css,js,md,json,yaml}"
-	ruff check --fix .
-	ruff format .
+	uv run npx prettier --write "**/*.{html,css,js,md,json,yaml}"
+	uv run ruff check --fix .
+	uv run ruff format .
 
 install:
 	uv sync --all-extras --all-groups
@@ -30,11 +30,11 @@ demo:
 
 help:
 	@echo "Available commands:"
-	@echo "  lint       - Check code with ruff"
-	@echo "  format     - Format code with ruff"
-	@echo "  install    - Install dependencies"
-	@echo "  tests      - Run tests with pytest"
-	@echo "  demo       - Generate a gif demonstrating the TurboDL CLI functionality"
+	@echo "  lint       - Check code with 'prettier' and 'ruff'"
+	@echo "  format     - Format code with 'prettier' and 'ruff'"
+	@echo "  install    - Install dependencies with 'uv'"
+	@echo "  tests      - Run tests with 'pytest'"
+	@echo "  demo       - Record a gif demonstrating the TurboDL CLI functionality with 'asciinema' and upload it"
 	@echo "  help       - Show this help message"
 
 %:
