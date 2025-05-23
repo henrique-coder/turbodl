@@ -33,7 +33,6 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
-    "Programming Language :: Python :: 3.14",
     "Programming Language :: Python :: Implementation :: CPython",
     "Programming Language :: Python :: Implementation :: PyPy",
     "Topic :: Internet",
@@ -49,15 +48,11 @@ dependencies = [
     "rich>=14.0.0",
     "streamsnapper",
     "tenacity>=9.1.2",
+    "typer>=0.15.4",
 ]
 
 [tool.uv.sources]
 streamsnapper = { git = "https://github.com/henrique-coder/streamsnapper.git" }
-
-[project.optional-dependencies]
-cli = [
-  "typer>=0.15.4",
-]
 
 [dependency-groups]
 lint = [

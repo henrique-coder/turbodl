@@ -579,10 +579,6 @@ dependencies = [
     { name = "rich" },
     { name = "streamsnapper" },
     { name = "tenacity" },
-]
-
-[package.optional-dependencies]
-cli = [
     { name = "typer" },
 ]
 
@@ -607,9 +603,8 @@ requires-dist = [
     { name = "rich", specifier = ">=14.0.0" },
     { name = "streamsnapper", git = "https://github.com/henrique-coder/streamsnapper.git" },
     { name = "tenacity", specifier = ">=9.1.2" },
-    { name = "typer", marker = "extra == 'cli'", specifier = ">=0.15.4" },
+    { name = "typer", specifier = ">=0.15.4" },
 ]
-provides-extras = ["cli"]
 
 [package.metadata.requires-dev]
 dev = [{ name = "fastapi", specifier = ">=0.115.12" }]
