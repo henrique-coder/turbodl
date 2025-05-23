@@ -511,12 +511,16 @@ wheels = [
 
 [[package]]
 name = "streamsnapper"
-version = "0.3.0"
-source = { git = "https://github.com/henrique-coder/streamsnapper.git#7ccec1b28a92f3a83529025a841cc72b0552b1d0" }
+version = "0.3.1"
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "httpx" },
     { name = "scrapetube" },
     { name = "yt-dlp" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/bc/7c/1b3e0024d7adab2fc69b32d86e0995412dfc6640cedb826e4dd75ee3c524/streamsnapper-0.3.1.tar.gz", hash = "sha256:59f995564717cd3bb0904ffc8bac86620ab401a5735ea802e35a38d99fa1e034", size = 31909, upload-time = "2025-05-23T13:55:11.664Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/13/7d/aa17e2a66297d549a670c3a1bbf9f84760bc149f1461f568b0e01752794b/streamsnapper-0.3.1-py3-none-any.whl", hash = "sha256:2df4b171776139a6a205f6b85d7177dc0452483ddc57f67d30296ad4d5a1bc92", size = 13550, upload-time = "2025-05-23T13:55:09.762Z" },
 ]
 
 [[package]]
@@ -601,7 +605,7 @@ requires-dist = [
     { name = "humanfriendly", specifier = ">=10.0" },
     { name = "psutil", specifier = ">=7.0.0" },
     { name = "rich", specifier = ">=14.0.0" },
-    { name = "streamsnapper", git = "https://github.com/henrique-coder/streamsnapper.git" },
+    { name = "streamsnapper", specifier = ">=0.3.1" },
     { name = "tenacity", specifier = ">=9.1.2" },
     { name = "typer", specifier = ">=0.15.4" },
 ]
@@ -661,9 +665,9 @@ wheels = [
 
 [[package]]
 name = "yt-dlp"
-version = "2025.4.30"
+version = "2025.5.22"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/75/ca/1d1a33dec2107463f59bc4b448fcf43718d86a36b6150e8a0cfd1a96a893/yt_dlp-2025.4.30.tar.gz", hash = "sha256:d01367d0c3ae94e35cb1e2eccb7a7c70e181c4ca448f4ee2374f26489d263603", size = 2981094, upload-time = "2025-04-30T23:31:17.679Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/09/93/695cef32796dc7e76597e68a267a34a1b4e29bef8e12da445fa7c0ad1e55/yt_dlp-2025.5.22.tar.gz", hash = "sha256:ea73854c5dabc124f29a35a8fae9bc5d422ef3231bebeea2bdfa82ac191a9c29", size = 3017654, upload-time = "2025-05-22T09:58:35.694Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ea/18/bbccb18661a853c3db947152439229b9bf686fe0ab2cc7848ab3a24f2ad2/yt_dlp-2025.4.30-py3-none-any.whl", hash = "sha256:53cd82bf13f12a1fe9c564b0004e001156b153c9247fa3cef14d1400ab359150", size = 3239476, upload-time = "2025-04-30T23:31:14.997Z" },
+    { url = "https://files.pythonhosted.org/packages/25/68/4f108193ebce3ee7beb5f9a21daa6bc875e261150b510be468626f151959/yt_dlp-2025.5.22-py3-none-any.whl", hash = "sha256:a49c4b76afeaded6254c3e2b759d8d5a13271aa963d5fccb51fe059d1c313151", size = 3264137, upload-time = "2025-05-22T09:58:32.613Z" },
 ]
