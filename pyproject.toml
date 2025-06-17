@@ -53,14 +53,14 @@ dependencies = [
 
 [dependency-groups]
 lint = [
-    "ruff>=0.11.12",
+    "ruff>=0.12.0",
 ]
 test = [
     "pytest>=8.4.0",
     "pytest-randomly>=3.16.0",
 ]
 dev = [
-    "fastapi>=0.115.12",
+    "fastapi>=0.115.13",
 ]
 
 [project.urls]
