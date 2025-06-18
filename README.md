@@ -130,12 +130,11 @@ turbodl download [...] https://example.com/file.txt path/to/file
 ## 🛠️ Development
 
 ```bash
+# [!] Make sure you have git, make and uv installed
+
 # Clone the repository
 git clone https://github.com/henrique-coder/turbodl.git
 cd turbodl
-
-# Install Poetry in your local environment
-pip install --upgrade poetry
 
 # Install project dependencies
 make install
