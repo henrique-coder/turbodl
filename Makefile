@@ -13,8 +13,8 @@ lint:
 
 format:
 	uv run npx prettier --write "**/*.{html,css,js,md,json,yaml}"
-	uv run ruff check --fix .
 	uv run ruff format .
+	uv run ruff check --fix .
 
 install:
 	uv sync --all-extras --all-groups
