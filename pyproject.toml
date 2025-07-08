@@ -69,7 +69,7 @@ streamsnapper = { git = "https://github.com/henrique-coder/streamsnapper.git", r
 
 [dependency-groups]
 dev = [
-    "fastapi>=0.115.14",
+    "fastapi>=0.116.0",
 ]
 lint = [
     "ruff>=0.12.2"
