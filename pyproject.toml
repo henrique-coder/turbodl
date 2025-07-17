@@ -69,10 +69,10 @@ streamsnapper = { git = "https://github.com/henrique-coder/streamsnapper.git", r
 
 [dependency-groups]
 dev = [
-    "fastapi>=0.116.0",
+    "fastapi>=0.116.1",
 ]
 lint = [
-    "ruff>=0.12.2"
+    "ruff>=0.12.3"
 ]
 test = [
     "pytest>=8.4.1",
