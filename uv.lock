@@ -530,7 +530,7 @@ wheels = [
 [[package]]
 name = "streamsnapper"
 version = "0.3.1"
-source = { git = "https://github.com/henrique-coder/streamsnapper.git?rev=main#44b6c973e17b42f3d804620802d1c4ddab38cec3" }
+source = { git = "https://github.com/henrique-coder/streamsnapper.git?rev=main#9dbd5a8e02058cad3e9aad81d816200cf0338b2a" }
 dependencies = [
     { name = "httpx" },
     { name = "humanfriendly" },
