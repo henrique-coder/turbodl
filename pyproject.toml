@@ -68,15 +68,16 @@ dependencies = [
 streamsnapper = { git = "https://github.com/henrique-coder/streamsnapper.git", rev = "main" }
 
 [dependency-groups]
-dev = [
-    "fastapi>=0.116.1",
-]
 lint = [
-    "ruff>=0.12.8"
+    "ruff>=0.12.8",
 ]
 test = [
     "pytest>=8.4.1",
-    "pytest-randomly>=3.16.0"
+    "pytest-randomly>=3.16.0",
+]
+dev = [
+    "uvicorn>=0.35.0",
+    "fastapi>=0.116.1",
 ]
 
 [project.urls]
