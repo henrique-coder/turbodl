@@ -134,17 +134,19 @@ turbodl download [...] https://example.com/file.txt path/to/file
 
 # Clone the repository
 git clone https://github.com/henrique-coder/turbodl.git
+
+# Enter the project directory
 cd turbodl
 
 # Install project dependencies
 make install
 
-# Run tests
-make tests
-
 # Lint and format code
 make lint
 make format
+
+# Run tests
+make tests
 ```
 
 ## 🤝 Contributing
