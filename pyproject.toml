@@ -69,7 +69,7 @@ streamsnapper = { git = "https://github.com/henrique-coder/streamsnapper.git", r
 
 [dependency-groups]
 lint = [
-    "ruff>=0.12.8",
+    "ruff>=0.12.9",
 ]
 test = [
     "pytest>=8.4.1",
