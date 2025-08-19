@@ -530,7 +530,7 @@ wheels = [
 [[package]]
 name = "streamsnapper"
 version = "0.3.1"
-source = { git = "https://github.com/henrique-coder/streamsnapper.git?rev=main#9dbd5a8e02058cad3e9aad81d816200cf0338b2a" }
+source = { git = "https://github.com/henrique-coder/streamsnapper.git?rev=main#bbd98f1c48f43a9bfb04d64ff888f3e348003f54" }
 dependencies = [
     { name = "httpx" },
     { name = "humanfriendly" },
@@ -590,7 +590,7 @@ wheels = [
 
 [[package]]
 name = "turbodl"
-version = "0.7.0"
+version = "0.6.2"
 source = { editable = "." }
 dependencies = [
     { name = "click" },
