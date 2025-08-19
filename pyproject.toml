@@ -4,7 +4,7 @@ build-backend = "uv_build"
 
 [project]
 name = "turbodl"
-version = "0.6.2"
+version = "0.7.0"
 description = "TurboDL is an extremely smart, fast, and efficient download manager designed to optimize your downloading experience."
 license = "MIT"
 readme = {file = "README.md", content-type = "text/markdown"}
