@@ -15,7 +15,7 @@ from src.turbodl import TurboDL
 def downloader() -> TurboDL:
     """Return a configured TurboDL instance."""
 
-    return TurboDL(connection_speed_mbps=1000 if getenv("GITHUB_ACTIONS") in ("true", "1") else 700)
+    return TurboDL(connection_speed_mbps=1000 if getenv("GITHUB_ACTIONS") in ("true", "1") else 100)
 
 
 @fixture

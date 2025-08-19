@@ -30,8 +30,6 @@ TurboDL is an extremely smart, fast, and efficient download manager designed to 
 ```bash
 # Install the stable version of TurboDL from PyPI
 pip install --upgrade turbodl
-# Or with the CLI interface
-pip install --upgrade turbodl[cli]
 
 # Install the beta version of TurboDL from GitHub
 pip install --upgrade git+https://github.com/henrique-coder/turbodl.git@main
@@ -102,7 +100,7 @@ turbodl download [...] https://example.com/file.txt path/to/file
 
 ## 📊 CLI Demo
 
-[![TurboDL CLI Demo](assets/demo.gif)](https://asciinema.org/a/l0FcY9aZhNF01IC7jN1iuvnUK)
+[![TurboDL CLI Demo](assets/demo.gif)](https://asciinema.org/a/NxnwCG6DOlJKhGxXRuYXbpTPx)
 
 ## 📋 Parameters
 
@@ -132,22 +130,23 @@ turbodl download [...] https://example.com/file.txt path/to/file
 ## 🛠️ Development
 
 ```bash
+# [!] Make sure you have git, make and uv installed
+
 # Clone the repository
 git clone https://github.com/henrique-coder/turbodl.git
+
+# Enter the project directory
 cd turbodl
 
-# Install Poetry in your local environment
-pip install --upgrade poetry
-
-# Install project dependencies
+# Install project dependencies (using uv)
 make install
-
-# Run tests
-make tests
 
 # Lint and format code
 make lint
 make format
+
+# Run tests
+make tests
 ```
 
 ## 🤝 Contributing

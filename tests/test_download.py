@@ -11,17 +11,24 @@ from src.turbodl.exceptions import TurboDLError
 
 TEST_FILES = [
     {
-        "name": "5mb_file",
-        "url": "https://files.testfile.org/anime.mp3",
-        "expectedFilename": "anime.mp3",
-        "expectedHash": "b79c0a4d7d73e08f088876867315ecd8",
+        "name": "1mb_file",
+        "url": "https://proof.ovh.net/files/1Mb.dat",
+        "expectedFilename": "1Mb.dat",
+        "expectedHash": "d5eefcccdb834958512bed157d01f3a7",
         "hashType": "md5",
     },
     {
-        "name": "50mb_file",
-        "url": "https://files.testfile.org/PDF/50MB-TESTFILE.ORG.pdf",
-        "expectedFilename": "50MB-TESTFILE.ORG.pdf",
-        "expectedHash": "eb405d3fee914fc235b835d2e01b5d62",
+        "name": "10mb_file",
+        "url": "https://proof.ovh.net/files/10Mb.dat",
+        "expectedFilename": "10Mb.dat",
+        "expectedHash": "e69c5582908fa41c1907340cba4ddfcf",
+        "hashType": "md5",
+    },
+    {
+        "name": "100mb_file",
+        "url": "https://proof.ovh.net/files/100Mb.dat",
+        "expectedFilename": "100Mb.dat",
+        "expectedHash": "39e45c4906be33a9ad868e05c62e87fa",
         "hashType": "md5",
     },
 ]
@@ -30,7 +37,7 @@ TEST_FILES = [
 def test_invalid_url(downloader: TurboDL, temporary_path: Path) -> None:
     """Test download with invalid URL."""
 
-    url: str = "https://invalid-url-that-does-not-exist.com/file.zip"
+    url: str = "https://invalid-url-that-does-not-exist.invalid@domain/file.zip"
 
     with raises(TurboDLError):
         downloader.download(url=url, output_path=temporary_path)

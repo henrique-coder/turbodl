@@ -15,4 +15,5 @@ dev.py
 demo.cast
 
 # Extensions
-# ...
+*.env
+*.log

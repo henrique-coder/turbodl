@@ -1,5 +1,38 @@
 # Changelog
 
+## [0.7.0] - (Critical Bug Fixes & Code Quality Improvements)
+
+#### Changed
+
+- Build system updated to use `uv_build` for improved package building
+- Development instructions enhanced with prerequisite information for repository cloning
+- README format improved with better organization and enhanced keywords
+- Makefile updated to use `uv run` for lint and format commands consistently
+- Ruff command ordering optimized in format target for improved functionality
+- Install command updated to include `--upgrade` flag for better dependency management
+- Demo GIF asset refreshed with updated visual demonstration
+
+#### Added
+
+- `uvicorn` added to development dependencies for enhanced development server support
+- `.env` file extension added to `.gitignore` to prevent environment file tracking
+
+#### Fixed
+
+- Critical download functionality restored by resolving URL validation and connection issues
+- Invalid URL format corrections in download tests for proper test execution
+- Default connection speed configuration corrected in downloader fixture
+- StreamSnapper object casing standardized throughout codebase
+- Test file updates and invalid URL format corrections for reliability
+- README instruction ordering improved for better user clarity
+- StreamSnapper source updated to latest commit hash for compatibility
+
+#### Removed
+
+- Python 3.14 classifier and optional CLI dependency removed for stability
+- CLI interface installation instructions removed from README for consistency
+- Version constraints removed from StreamSnapper dependency for flexibility
+
 ## [0.6.2] - (Critical CLI Resolution & Python Versioning Update)
 
 #### Changed
