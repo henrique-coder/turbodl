@@ -100,7 +100,7 @@ turbodl download [...] https://example.com/file.txt path/to/file
 
 ## 📊 CLI Demo
 
-[![TurboDL CLI Demo](assets/demo.gif)](https://asciinema.org/a/l0FcY9aZhNF01IC7jN1iuvnUK)
+[![TurboDL CLI Demo](assets/demo.gif)](https://asciinema.org/a/NxnwCG6DOlJKhGxXRuYXbpTPx)
 
 ## 📋 Parameters
 
@@ -138,7 +138,7 @@ git clone https://github.com/henrique-coder/turbodl.git
 # Enter the project directory
 cd turbodl
 
-# Install project dependencies
+# Install project dependencies (using uv)
 make install
 
 # Lint and format code
