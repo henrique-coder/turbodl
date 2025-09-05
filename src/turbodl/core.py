@@ -333,7 +333,7 @@ class TurboDL:
             temporary_audio_path = self._output_path
 
             # Merge audio and video streams
-            output_merged_path = self._output_path.with_name(youtube.information.to_dict()["clean_title"]).with_suffix(
+            output_merged_path = self._output_path.with_name(youtube.information.clean_title).with_suffix(
                 temporary_video_path.suffix if temporary_video_path.suffix else ".mp4"
             )
 
