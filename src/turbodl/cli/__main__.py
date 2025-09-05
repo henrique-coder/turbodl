@@ -143,10 +143,10 @@ def download(
             hash_type=hash_type,
         )
     except TurboDLError as e:
-        console.print(f"[red]TurboDL (internal) error: {e}")
+        console.print(f"[red]TurboDL (internal) error: {repr(e)}[/]")
         raise Exit(1) from e
     except Exception as e:
-        console.print(f"[red]Unknown (unhandled) error: {e}")
+        console.print(f"[red]Unknown (unhandled) error: {repr(e)}[/]")
         raise Exit(1) from e
 
 
