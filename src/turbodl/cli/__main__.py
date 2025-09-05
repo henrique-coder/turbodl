@@ -144,14 +144,16 @@ def download(
         )
     except TurboDLError as e:
         console.print(f"[red]TurboDL (internal) error: {e}[/]")
+
         raise Exit(1) from e
     except Exception as e:
-        from traceback import extract_tb
+        from rich.traceback import Traceback
 
-        tb = extract_tb(e.__traceback__)[-1]
-        console.print(
-            f"[red]Unknown error:[/] {type(e).__name__}('{e}') at [{tb.filename.split('/')[-1]}:{tb.lineno}] in {tb.name}()"
-        )
+        console.print(f"[red]Unknown error:[/] {type(e).__name__}: {e}")
+
+        tb = Traceback(show_locals=False, max_frames=3)
+        console.print(tb)
+
         raise Exit(1) from e
 
 
