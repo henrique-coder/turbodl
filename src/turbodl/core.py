@@ -303,7 +303,7 @@ class TurboDL:
             youtube = YouTube(logging=False)
             youtube.extract(url=f"https://www.youtube.com/watch?v={video_id}")
             youtube.analyze_information(check_thumbnails=False, retrieve_dislike_count=False)
-            youtube.analyze_video_streams(preferred_quality="all")
+            youtube.analyze_video_streams(preferred_quality="4320p")
             youtube.analyze_audio_streams(preferred_language="local")
 
             self._download_single_file(

@@ -143,10 +143,17 @@ def download(
             hash_type=hash_type,
         )
     except TurboDLError as e:
-        console.print(f"[red]TurboDL (internal) error: {e}")
+        console.print(f"[red]TurboDL (internal) error: {e}[/]")
+
         raise Exit(1) from e
     except Exception as e:
-        console.print(f"[red]Unknown (unhandled) error: {e}")
+        from rich.traceback import Traceback
+
+        console.print(f"[red]Unknown error:[/] {type(e).__name__}: {e}")
+
+        tb = Traceback(show_locals=False, max_frames=3)
+        console.print(tb)
+
         raise Exit(1) from e
 
 
