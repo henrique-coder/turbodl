@@ -50,14 +50,12 @@ classifiers = [
     "Typing :: Typed"
 ]
 dependencies = [
-    "click",
-    "httpx",
-    "humanfriendly",
-    "psutil",
-    "rich",
+    "httpx>=0.28.1",
+    "humanfriendly>=10.0",
+    "psutil>=7.1.0",
+    "rich>=14.2.0",
     "streamsnapper",
-    "tenacity",
-    "typer",
+    "tenacity>=9.1.2",
 ]
 
 [tool.uv.sources]
