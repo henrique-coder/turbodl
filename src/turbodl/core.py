@@ -1,4 +1,3 @@
-# Standard modules
 from os import PathLike
 from pathlib import Path
 from signal import SIGINT, SIGTERM, Signals, signal
@@ -6,18 +5,14 @@ from sys import exit
 from types import FrameType
 from typing import Literal, NoReturn
 
-# Third-party modules
 from httpx import Client
 from humanfriendly import InvalidSize, format_size, parse_size
 from rich.console import Console
 from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn
-from streamsnapper import YouTube, YouTubeExtractor
 
-# Local modules
 from .buffers import ChunkBuffer
 from .downloaders import download_with_buffer, download_without_buffer
 from .exceptions import DownloadInterruptedError, InvalidArgumentError, NotEnoughSpaceError, UnidentifiedFileSizeError
-from .merger import Merger
 from .utils import (
     CustomDownloadColumn,
     CustomSpeedColumn,
@@ -295,76 +290,17 @@ class TurboDL:
         if enable_ram_buffer == "auto":
             enable_ram_buffer = not is_ram_dir
 
-        # Check if the URL is a YouTube video
-        youtube_extractor = YouTubeExtractor()
-        video_id = youtube_extractor.extract_video_id(url)
+        self._download_single_file(
+            url,
+            pre_allocate_space,
+            enable_ram_buffer,
+            overwrite,
+            headers,
+            inactivity_timeout,
+            timeout,
+            expected_hash,
+            hash_type,
+        )
 
-        if video_id:
-            youtube = YouTube(logging=False)
-            youtube.extract(url=f"https://www.youtube.com/watch?v={video_id}")
-            youtube.analyze_information(check_thumbnails=False, retrieve_dislike_count=False)
-            youtube.analyze_video_streams(preferred_quality="4320p")
-            youtube.analyze_audio_streams(preferred_language="local")
-
-            self._download_single_file(
-                youtube.best_video_download_url,
-                pre_allocate_space,
-                enable_ram_buffer,
-                False,
-                headers,
-                inactivity_timeout,
-                timeout,
-                None,
-                hash_type,
-            )
-            temporary_video_path = self._output_path
-
-            self._download_single_file(
-                youtube.best_audio_download_url,
-                pre_allocate_space,
-                enable_ram_buffer,
-                False,
-                headers,
-                inactivity_timeout,
-                timeout,
-                None,
-                hash_type,
-            )
-            temporary_audio_path = self._output_path
-
-            # Merge audio and video streams
-            output_merged_path = self._output_path.with_name(youtube.information.clean_title).with_suffix(
-                temporary_video_path.suffix if temporary_video_path.suffix else ".mp4"
-            )
-
-            merger = Merger(logging=False)
-            merger.merge(
-                video_path=temporary_video_path,
-                audio_path=temporary_audio_path,
-                output_path=output_merged_path,
-                ffmpeg_path="local",
-            )
-
-            temporary_video_path.unlink(missing_ok=True)
-            temporary_audio_path.unlink(missing_ok=True)
-
-            # Set the output path attribute
-            self.output_path = output_merged_path.as_posix()
-
-            # Show success message
-            self._console.print(f"[green]Successfully downloaded [bold]{youtube.information.title}[/] from YouTube[/]")
-        else:
-            self._download_single_file(
-                url,
-                pre_allocate_space,
-                enable_ram_buffer,
-                overwrite,
-                headers,
-                inactivity_timeout,
-                timeout,
-                expected_hash,
-                hash_type,
-            )
-
-            # Set the output path attribute
-            self.output_path = self._output_path.as_posix()
+        # Set the output path attribute
+        self.output_path = self._output_path.as_posix()

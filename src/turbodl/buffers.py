@@ -1,11 +1,8 @@
-# Standard modules
 from io import BytesIO
 from time import time
 
-# Third-party modules
 from psutil import virtual_memory
 
-# Local modules
 from .constants import CHUNK_SIZE, MAX_BUFFER_SIZE, MAX_RAM_USAGE
 
 

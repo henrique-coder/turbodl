@@ -19,29 +19,29 @@ jobs:
       fail-fast: false
       matrix:
         os: ["ubuntu-latest", "windows-latest", "macos-latest"]
-        python-version: ["3.10", "3.11", "3.12", "3.13"]
+        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
 
     steps:
       - name: 📥 Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
       - name: 🐍 Setup Python
         id: setup_python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
           check-latest: true
 
       - name: 🏗️ Setup UV
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v7
 
       - name: 🛠️ Create Virtual Environment with UV using specific Python
         run: uv venv .venv --python ${{ steps.setup_python.outputs.python-path }}
 
       - name: 📦 Install Dependencies with UV using specific Python for resolution
-        run: uv sync --group test
+        run: uv sync --group tests
         env:
           UV_PYTHON: ${{ steps.setup_python.outputs.python-path }}
 

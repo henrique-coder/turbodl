@@ -23,7 +23,7 @@ tests:
 	uv run pytest -v --xfail-tb
 
 demo:
-	asciinema rec "demo.cast" --overwrite --rows 5 --cols 144 --title "TurboDL CLI Demo (https://github.com/henrique-coder/turbodl)" --command "echo \"$$ turbodl download -cs 700 https://github.com/henrique-coder/turbospeed-files/releases/download/turbospeed-files/turbospeed-file-300mb.bin /tmp\" && uv run turbodl download -cs 700 https://github.com/henrique-coder/turbospeed-files/releases/download/turbospeed-files/turbospeed-file-300mb.bin /tmp"
+	asciinema rec "demo.cast" --overwrite --rows 5 --cols 144 --title "TurboDL CLI Demo (https://github.com/henrique-coder/turbodl)" --command "echo \"$$ turbodl download -cs 650 https://github.com/henrique-coder/turbospeed-files/releases/download/turbospeed-files/200mb.bin /tmp\" && uv run turbodl download -cs 650 https://github.com/henrique-coder/turbospeed-files/releases/download/turbospeed-files/200mb.bin /tmp"
 	agg "demo.cast" "assets/demo.gif"
 	@echo -n "Do you want to upload the recording to asciinema (y/N): "
 	@read answer; if [ "$$answer" = "y" ] || [ "$$answer" = "Y" ]; then asciinema upload "demo.cast"; fi

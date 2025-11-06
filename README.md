@@ -21,25 +21,19 @@ TurboDL is an extremely smart, fast, and efficient download manager designed to 
 - **Real-time Feedback**: Provides an elegant, accurate progress bar with detailed statistics
 - **Cross-platform Compatibility**: Works consistently across all major operating systems
 
-### Additional Built-in Features
-
-- **YouTube Support**: Download YouTube videos in the highest available quality and automatically merge audio and video streams using [StreamSnapper](https://github.com/henrique-coder/streamsnapper) library
-
 ## 📦 Installation
 
 ```bash
-# Install the stable version of TurboDL from PyPI
-pip install --upgrade turbodl
+# Install as project package
+uv add --upgrade turbodl  # Stable version
+uv add --upgrade git+https://github.com/henrique-coder/turbodl.git --branch main  # Beta version
+uv add --upgrade git+https://github.com/henrique-coder/turbodl.git --branch dev  # Active development version
 
-# Install the beta version of TurboDL from GitHub
-pip install --upgrade git+https://github.com/henrique-coder/turbodl.git@main
-
-# Install the development version of TurboDL from GitHub
-pip install --upgrade git+https://github.com/henrique-coder/turbodl.git@dev
+# Install as system tool
+uv tool install --upgrade turbodl  # Stable version
+uv tool install --upgrade git+https://github.com/henrique-coder/turbodl.git@main  # Beta version
+uv tool install --upgrade git+https://github.com/henrique-coder/turbodl.git@dev  # Active development version
 ```
-
-> [!Warning]
-> If you already have a version installed and want to switch to a different branch (for example, to test new features or fix bugs), you must use the `--force-reinstall` parameter to ensure the upgrade occurs correctly.
 
 ## 🔍 Examples
 
@@ -100,7 +94,7 @@ turbodl download [...] https://example.com/file.txt path/to/file
 
 ## 📊 CLI Demo
 
-[![TurboDL CLI Demo](assets/demo.gif)](https://asciinema.org/a/NxnwCG6DOlJKhGxXRuYXbpTPx)
+[![TurboDL CLI Demo](assets/demo.gif)](https://asciinema.org/a/ofBSfZGXg4DQ1rqJgADPKW2o2)
 
 ## 📋 Parameters
 
@@ -165,14 +159,10 @@ Contributions are what make the open source community such an amazing place to l
   <img src="https://contrib.rocks/image?repo=henrique-coder/turbodl" />
 </a>
 
-## 📄 License
-
-Distributed under the MIT License. See `LICENSE` for more information.
-
-## 📊 Project Status
-
-TurboDL is in active development. Check the [releases page](https://github.com/henrique-coder/turbodl/releases) for the latest updates.
-
 ## 🌟 Star the Project
 
 If you find this project useful, please consider giving it a star on [GitHub](https://github.com/henrique-coder/turbodl).
+
+## 📄 License
+
+Distributed under the MIT License. See `LICENSE` for more information.
