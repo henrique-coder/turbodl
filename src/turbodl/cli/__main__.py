@@ -1,9 +1,7 @@
-# Third-party modules
 from httpx import get
 from rich.console import Console
 from typer import Argument, Exit, Option, Typer
 
-# Local modules
 from turbodl import TurboDL, __version__
 from turbodl.exceptions import TurboDLError
 
