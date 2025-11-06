@@ -8,12 +8,11 @@ __pycache__
 .pytest_cache
 
 # Directories
-server
+.debug
 
 # Files
-dev.py
+example.py
 demo.cast
 
 # Extensions
 *.env
-*.log
